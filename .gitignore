@@ -18,6 +18,8 @@ yarn-error.log*
 
 # env files
 .env*
+# ...salvo la plantilla, que no contiene ningun valor real
+!.env.example
 
 # vercel
 .vercel
