@@ -21,6 +21,14 @@ export function EventsSection({ data }: { data?: EventsData }) {
   const location = data?.location || "San Pedro del Pinatar, Murcia"
   const schedule = data?.schedule || "Todos los Jueves"
   const session = data?.session || "REPARTO CUBANO"
+  const tagline = data?.title || "La noche mas caliente de la costa"
+
+  // El titulo se pinta con la ultima palabra en degradado dorado, igual que
+  // el diseno original ("BABYLON 2.0").
+  const words = eventName.trim().split(/\s+/)
+  const titleTail = words.length > 1 ? words[words.length - 1] : eventName
+  const titleLead = words.length > 1 ? words.slice(0, -1).join(" ") : ""
+
   return (
     <section id="eventos" className="relative py-24 md:py-32">
       {/* Background Decoration */}
@@ -60,11 +68,10 @@ export function EventsSection({ data }: { data?: EventsData }) {
             <div className="flex flex-col justify-center p-8 md:p-12">
               <div className="mb-6">
                 <h3 className="mb-2 text-3xl font-black uppercase tracking-wide text-foreground md:text-4xl lg:text-5xl">
-                  BABYLON <span className="text-gradient-gold">2.0</span>
+                  {titleLead}
+                  {titleTail && <span className="text-gradient-gold">{titleLead ? " " : ""}{titleTail}</span>}
                 </h3>
-                <p className="text-lg text-foreground/60 font-medium">
-                  La noche mas caliente de la costa
-                </p>
+                <p className="text-lg text-foreground/60 font-medium">{tagline}</p>
               </div>
 
               <div className="mb-8 space-y-4 text-foreground/70">

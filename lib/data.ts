@@ -365,11 +365,12 @@ export async function getGalleryImages(onlyPublished = false): Promise<GalleryIm
  * componentes publicos actuales, leyendo desde Neon.
  */
 export async function getPublicContent() {
-  const [settings, sections, events, gallery] = await Promise.all([
+  const [settings, sections, events, gallery, services] = await Promise.all([
     getSettings(),
     getSections(),
     getEvents(true),
     getGalleryImages(true),
+    getServices(true),
   ])
 
   const hero = sections["hero"]
@@ -382,7 +383,6 @@ export async function getPublicContent() {
       ? {
           backgroundImage: hero.image_url || undefined,
           backgroundPosition: (hero.extra?.backgroundPosition as string) || undefined,
-          badge: (hero.extra?.badge as string) || undefined,
           title: hero.title || undefined,
           subtitle: hero.subtitle || undefined,
           description: hero.content || undefined,
@@ -416,6 +416,27 @@ export async function getPublicContent() {
           session: firstEvent.description || undefined,
         }
       : undefined,
+    // Resto de eventos publicados, ademas del destacado de arriba.
+    moreEvents: events.slice(1).map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.event_date,
+      time: e.event_time,
+      venue: e.venue,
+      city: e.city,
+      image: e.image_url,
+      ticketsLink: e.tickets_link,
+    })),
+    services: services.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      image: s.image_url,
+      priceMinor: s.price_minor,
+      priceNote: s.price_note,
+      buttonText: s.button_text,
+      buttonLink: s.button_link,
+    })),
     gallery: gallery.map((g) => ({
       id: g.id,
       src: g.blob_url,
