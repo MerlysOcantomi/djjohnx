@@ -118,7 +118,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
             {latestPhotos.slice(0, 6).map((img) => (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img
                 key={img.id}
                 src={img.blob_url || "/placeholder.svg"}

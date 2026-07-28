@@ -138,7 +138,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRow[] }) 
           {events.map((e) => (
             <div key={e.id} className="flex gap-3 rounded-lg border border-border bg-card p-3">
               {e.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                 
                 <img src={e.image_url || "/placeholder.svg"} alt={e.title} className="h-20 w-20 shrink-0 rounded object-cover" />
               ) : (
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded bg-muted text-xs text-muted-foreground">

@@ -52,7 +52,7 @@ export function ImageUpload({
       <p className="mb-2 text-sm text-foreground/70">{label}</p>
       <div className={`relative ${aspect} w-full overflow-hidden rounded-lg border border-border/50 bg-muted/30`}>
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
+           
           <img src={value || "/placeholder.svg"} alt="Vista previa" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-foreground/40">Sin imagen</div>

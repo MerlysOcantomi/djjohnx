@@ -250,7 +250,7 @@ export async function getSettings(): Promise<SiteSettings> {
       billing: { ...DEFAULT_SETTINGS.billing, ...(d.billing || {}) },
       appearance: { ...DEFAULT_SETTINGS.appearance, ...(d.appearance || {}) },
     }
-  } catch (e) {
+  } catch {
     console.warn("[v0] getSettings fallo, usando defaults")
     return DEFAULT_SETTINGS
   }

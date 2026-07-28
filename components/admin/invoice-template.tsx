@@ -36,7 +36,7 @@ export function InvoiceTemplate({
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
           style={{ opacity: 0.05 }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img src={logoUrl || "/placeholder.svg"} alt="" style={{ width: "60%", maxWidth: 420 }} />
         </div>
       )}
@@ -46,7 +46,7 @@ export function InvoiceTemplate({
         <header className={`flex justify-between gap-6 ${headerAlign}`}>
           <div>
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img
                 src={logoUrl || "/placeholder.svg"}
                 alt={profile.artistName || "Logo"}

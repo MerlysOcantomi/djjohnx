@@ -4,7 +4,17 @@ import { Button } from "@/components/ui/button"
 import { Play, MessageCircle } from "lucide-react"
 import { FloatingNotes } from "@/components/floating-notes"
 
-export function Hero({ data }: { data?: { backgroundImage: string; backgroundPosition: string; badge: string; title: string; subtitle: string; description: string } }) {
+type HeroData = {
+  backgroundImage?: string
+  backgroundPosition?: string
+  badge?: string
+  title?: string
+  subtitle?: string
+  description?: string
+  visible?: boolean
+}
+
+export function Hero({ data }: { data?: HeroData }) {
   const bg = data?.backgroundImage || 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/facebook_1778951869128_7461464940495022770-zB1r4yIazjXJjULMBGCScAy2LPyCbt.jpg'
   const pos = data?.backgroundPosition || 'center 55%'
   const badge = data?.badge || 'MUSICA QUE MUEVE EL MUNDO'
