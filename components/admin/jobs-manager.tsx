@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useMemo, useTransition } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import type { Job } from "@/lib/data"
 import {
   saveJob,
@@ -118,6 +118,25 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
   const [payAmount, setPayAmount] = useState("")
   const [deleting, setDeleting] = useState<Job | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // El resumen enlaza aqui con ?nuevo=1 o ?editar=<id> para abrir el
+  // formulario directamente, ya que los trabajos no tienen pagina propia.
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get("nuevo")) {
+      setDraft(toDraft())
+      setOpen(true)
+      return
+    }
+    const editId = Number(searchParams.get("editar"))
+    if (editId) {
+      const job = initialJobs.find((j) => j.id === editId)
+      if (job) {
+        setDraft(toDraft(job))
+        setOpen(true)
+      }
+    }
+  }, [searchParams, initialJobs])
 
   const kpis = useMemo(() => {
     let collected = 0

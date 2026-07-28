@@ -56,21 +56,37 @@ export function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export async function shareInvoicePdf(blob: Blob, filename: string, message: string): Promise<"shared" | "downloaded"> {
+export type ShareResult = "shared" | "cancelled" | "downloaded" | "downloaded-copied"
+
+/**
+ * Comparte el PDF con la hoja nativa del sistema cuando el navegador lo
+ * permite. Si no, descarga el archivo y copia el mensaje al portapapeles
+ * para poder pegarlo en WhatsApp o en el correo.
+ */
+export async function shareInvoicePdf(blob: Blob, filename: string, message: string): Promise<ShareResult> {
   const file = new File([blob], filename, { type: "application/pdf" })
   const nav = navigator as Navigator & {
     canShare?: (data?: ShareData) => boolean
   }
+
   if (typeof nav.share === "function" && nav.canShare?.({ files: [file] })) {
     try {
       await nav.share({ files: [file], title: filename, text: message })
       return "shared"
-    } catch {
-      // El usuario cancelo o fallo: caemos a descarga.
+    } catch (e) {
+      // Si el usuario cierra la hoja de compartir no hay que descargar nada.
+      if (e instanceof DOMException && e.name === "AbortError") return "cancelled"
     }
   }
+
   downloadBlob(blob, filename)
-  return "downloaded"
+
+  try {
+    await navigator.clipboard.writeText(message)
+    return "downloaded-copied"
+  } catch {
+    return "downloaded"
+  }
 }
 
 // El nombre del archivo vive en lib/invoice-number.ts para poder probarlo

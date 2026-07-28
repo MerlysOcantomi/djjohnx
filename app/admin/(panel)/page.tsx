@@ -4,7 +4,7 @@ import { formatEurFromMinor, formatDateEs } from "@/lib/format"
 import { jobStatusLabel } from "@/lib/status"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Briefcase, FileText, ImageIcon, Globe, CalendarClock, Wallet } from "lucide-react"
+import { Briefcase, FileText, ImageIcon, Globe, CalendarClock } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       {/* Accesos rapidos */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Button asChild className="h-auto flex-col gap-2 py-4">
-          <Link href="/admin/trabajos/nuevo">
+          <Link href="/admin/trabajos?nuevo=1">
             <Briefcase className="h-5 w-5" />
             <span className="text-xs">Nuevo trabajo</span>
           </Link>
@@ -81,14 +81,14 @@ export default async function DashboardPage() {
         {upcoming.length === 0 ? (
           <Card className="p-6 text-center text-sm text-foreground/60">
             No hay trabajos proximos.{" "}
-            <Link href="/admin/trabajos/nuevo" className="text-primary underline">
+            <Link href="/admin/trabajos?nuevo=1" className="text-primary underline">
               Crear uno
             </Link>
           </Card>
         ) : (
           <div className="space-y-2">
             {upcoming.map((job) => (
-              <Link key={job.id} href={`/admin/trabajos/${job.id}`}>
+              <Link key={job.id} href={`/admin/trabajos?editar=${job.id}`}>
                 <Card className="flex items-center justify-between p-4 transition-colors hover:bg-foreground/5">
                   <div>
                     <p className="font-semibold text-foreground">{job.client_name}</p>
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
       {/* Ultimas fotos */}
       <section>
         <div className="mb-3 flex items-center gap-2">
-          <Wallet className="h-5 w-5 text-primary" />
+          <ImageIcon className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-bold text-foreground">Ultimas fotografias</h2>
         </div>
         {latestPhotos.length === 0 ? (

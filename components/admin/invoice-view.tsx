@@ -33,7 +33,7 @@ export function InvoiceView({
       toast.success("PDF generado")
     } catch (e) {
       toast.error("No se pudo generar el PDF")
-      console.log("[v0] PDF error:", e instanceof Error ? e.message : e)
+      console.error("[factura] Error al generar el PDF:", e instanceof Error ? e.message : e)
     } finally {
       setBusy(null)
     }
@@ -45,10 +45,18 @@ export function InvoiceView({
     try {
       const blob = await invoiceElementToPdfBlob(sheetRef.current)
       const result = await shareInvoicePdf(blob, filename, SHARE_MESSAGE)
-      toast.success(result === "shared" ? "Factura compartida" : "PDF descargado para compartir")
+      if (result === "shared") {
+        toast.success("Factura compartida")
+      } else if (result === "cancelled") {
+        // El usuario cerro la hoja de compartir: no hay nada que avisar.
+      } else if (result === "downloaded-copied") {
+        toast.success("Tu navegador no permite compartir archivos. Hemos descargado el PDF y copiado el mensaje.")
+      } else {
+        toast.success("Tu navegador no permite compartir archivos. Hemos descargado el PDF.")
+      }
     } catch (e) {
       toast.error("No se pudo compartir la factura")
-      console.log("[v0] Share error:", e instanceof Error ? e.message : e)
+      console.error("[factura] Error al compartir:", e instanceof Error ? e.message : e)
     } finally {
       setBusy(null)
     }
@@ -70,9 +78,16 @@ export function InvoiceView({
         </Button>
       </div>
 
+      {/*
+        El escalado para movil va en el contenedor, no en el elemento
+        referenciado: html2canvas captura los estilos del propio nodo, asi que
+        si el ref llevara el transform el PDF saldria reducido desde el movil.
+      */}
       <div className="overflow-x-auto rounded-lg bg-neutral-200 p-4 print:overflow-visible print:bg-transparent print:p-0">
-        <div ref={sheetRef} className="origin-top scale-[0.55] sm:scale-75 md:scale-90 lg:scale-100 print:scale-100">
-          <InvoiceTemplate invoice={invoice} items={items} settings={settings} />
+        <div className="origin-top scale-[0.55] sm:scale-75 md:scale-90 lg:scale-100 print:scale-100">
+          <div ref={sheetRef}>
+            <InvoiceTemplate invoice={invoice} items={items} settings={settings} />
+          </div>
         </div>
       </div>
     </div>
