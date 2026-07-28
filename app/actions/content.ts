@@ -86,6 +86,7 @@ const videoSchema = z.object({
   title: z.string().trim().max(200),
   description: z.string().trim().max(2000),
   youtubeId: z.string().trim().max(40),
+  imageUrl: optionalUrl,
   visible: z.boolean(),
 })
 
@@ -100,6 +101,7 @@ export async function saveVideoAction(input: z.infer<typeof videoSchema>) {
     id: "video",
     title: data.title,
     content: data.description,
+    image_url: data.imageUrl || null,
     extra: { youtubeId: id },
     sort_order: 3,
     visible: data.visible,

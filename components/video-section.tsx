@@ -7,6 +7,7 @@ interface VideoData {
   title?: string
   youtubeId?: string
   description?: string
+  image?: string
 }
 
 export function VideoSection({ data }: { data?: VideoData }) {
@@ -14,6 +15,8 @@ export function VideoSection({ data }: { data?: VideoData }) {
   const ytId = data?.youtubeId || "Mo1ri6aCWCA"
   const videoTitle = data?.title || "MUSICO, POETA Y LOCO"
   const videoDesc = data?.description || "Una mirada a mi pasion por la musica y los ritmos que mueven mi alma"
+  // Portada propia si se ha subido una; si no, la miniatura de YouTube.
+  const poster = data?.image || `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
 
   return (
     <section className="relative py-24 md:py-32">
@@ -42,7 +45,7 @@ export function VideoSection({ data }: { data?: VideoData }) {
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
-                  backgroundImage: `url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg')`,
+                  backgroundImage: `url('${poster}')`,
                 }}
               />
               <div className="absolute inset-0 bg-background/60" />

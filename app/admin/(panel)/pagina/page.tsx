@@ -39,6 +39,7 @@ export default async function PaginaPage() {
           title: video?.title ?? "",
           description: video?.content ?? "",
           youtubeId: (video?.extra?.youtubeId as string) ?? "",
+          imageUrl: video?.image_url ?? "",
           visible: video?.visible ?? true,
         }}
         contact={{

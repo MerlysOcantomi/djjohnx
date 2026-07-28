@@ -30,7 +30,7 @@ type About = {
   visible: boolean
   stats: { number: string; label: string }[]
 }
-type Video = { title: string; description: string; youtubeId: string; visible: boolean }
+type Video = { title: string; description: string; youtubeId: string; imageUrl: string; visible: boolean }
 type Contact = {
   email: string
   phone: string
@@ -264,6 +264,11 @@ export function PageEditor(props: { hero: Hero; about: About; video: Video; cont
                 onChange={(e) => setVideo({ ...video, youtubeId: e.target.value })}
               />
             </div>
+            <ImageUpload
+              label="Imagen de portada (opcional; si no, se usa la miniatura de YouTube)"
+              value={video.imageUrl}
+              onChange={(url) => setVideo({ ...video, imageUrl: url })}
+            />
             <SaveButton pending={pending} />
           </form>
         </Card>

@@ -403,6 +403,7 @@ export async function getPublicContent() {
           title: video.title || undefined,
           description: video.content || undefined,
           youtubeId: (video.extra?.youtubeId as string) || undefined,
+          image: video.image_url || undefined,
           visible: video.visible,
         }
       : undefined,
