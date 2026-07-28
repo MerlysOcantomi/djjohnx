@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { calculateInvoice, type DiscountType } from "@/lib/invoice-calc"
 import { getSettings } from "@/lib/data"
+import { DRAFT_NUMBER, formatInvoiceNumber, isDraftNumber, sanitizePrefix } from "@/lib/invoice-number"
 
 const lineSchema = z.object({
   id: z.number().optional(),
@@ -73,19 +74,21 @@ function n(v: string | null | undefined) {
  * `startAt` es el "siguiente numero" configurado en /admin/configuracion y
  * solo se aplica la primera vez que se usa un prefijo en un anio.
  */
-export async function assignInvoiceNumber(prefix: string, startAt = 1): Promise<string> {
+// No se exporta: en un modulo "use server" cualquier funcion exportada
+// queda expuesta como endpoint publico, y esta consume numeros de factura.
+async function assignInvoiceNumber(prefix: string, startAt = 1): Promise<string> {
   const year = new Date().getFullYear()
+  const safePrefix = sanitizePrefix(prefix)
   const first = Number.isFinite(startAt) && startAt > 0 ? Math.floor(startAt) : 1
   const rows = (await sql`
     INSERT INTO invoice_counters (prefix, year, next_number)
-    VALUES (${prefix}, ${year}, ${first + 1})
+    VALUES (${safePrefix}, ${year}, ${first + 1})
     ON CONFLICT (prefix, year) DO UPDATE
       SET next_number = invoice_counters.next_number + 1,
           updated_at = now()
     RETURNING next_number - 1 AS assigned
   `) as { assigned: number }[]
-  const assigned = rows[0]?.assigned ?? first
-  return `${prefix}-${year}-${String(assigned).padStart(3, "0")}`
+  return formatInvoiceNumber(safePrefix, year, rows[0]?.assigned ?? first)
 }
 
 async function persistInvoice(input: InvoiceInput, issue: boolean) {
@@ -122,7 +125,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
           status: string
         }[])[0]
       : undefined
-    if (current && current.number && current.number !== "BORRADOR") {
+    if (current && !isDraftNumber(current.number)) {
       number = current.number
     } else {
       const settings = await getSettings()
@@ -195,7 +198,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
         payment_method, payment_holder, payment_iban, payment_bic, payment_reference,
         payment_terms, client_notes, internal_notes
       ) VALUES (
-        ${number || "BORRADOR"}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null},
+        ${number || DRAFT_NUMBER}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null},
         ${n(data.client.name)}, ${n(data.client.taxId)}, ${n(data.client.address)}, ${n(data.client.postalCode)}, ${n(data.client.city)},
         ${n(data.client.province)}, ${n(data.client.country)}, ${n(data.client.email)}, ${n(data.client.phone)},
         ${data.discountType}, ${data.discountValueMinor}, ${data.discountPercent},
@@ -239,10 +242,12 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
 }
 
 export async function saveInvoice(input: InvoiceInput) {
+  await requireAdmin()
   return persistInvoice(input, false)
 }
 
 export async function issueInvoice(input: InvoiceInput) {
+  await requireAdmin()
   return persistInvoice(input, true)
 }
 

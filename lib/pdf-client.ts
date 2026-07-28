@@ -73,9 +73,6 @@ export async function shareInvoicePdf(blob: Blob, filename: string, message: str
   return "downloaded"
 }
 
-export function invoicePdfName(number: string, status: string): string {
-  if (status === "draft" || !number || number === "BORRADOR") {
-    return "Factura-JOHNX-DJ-Borrador.pdf"
-  }
-  return `Factura-${number}.pdf`
-}
+// El nombre del archivo vive en lib/invoice-number.ts para poder probarlo
+// sin depender del navegador.
+export { invoicePdfFilename as invoicePdfName } from "@/lib/invoice-number"
