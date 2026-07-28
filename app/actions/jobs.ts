@@ -5,13 +5,18 @@ import { sql } from "@/lib/db"
 import { eurosToMinor } from "@/lib/format"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { JOB_STATUS_KEYS, type JobStatus, type PaymentStatus } from "@/lib/status"
 
-export const JOB_STATUSES = ["pendiente", "confirmado", "realizado", "cancelado"] as const
+export const JOB_STATUSES = JOB_STATUS_KEYS as readonly JobStatus[]
 
-function paymentStatusFor(amountMinor: number, paidMinor: number): string {
-  if (paidMinor <= 0) return "pendiente"
-  if (paidMinor >= amountMinor) return "cobrado"
-  return "parcial"
+/**
+ * Deriva el estado de pago a partir de los importes.
+ * Sin factura vinculada y sin cobros, el trabajo esta "No facturado".
+ */
+function paymentStatusFor(amountMinor: number, paidMinor: number, hasInvoice: boolean): PaymentStatus {
+  if (amountMinor > 0 && paidMinor >= amountMinor) return "paid"
+  if (paidMinor > 0) return "partially_paid"
+  return hasInvoice ? "pending" : "not_invoiced"
 }
 
 function revalidateAll() {
@@ -33,7 +38,7 @@ const jobSchema = z.object({
   endTime: z.string().max(20).optional().default(""),
   amountEuros: z.string().optional().default(""),
   paidEuros: z.string().optional().default(""),
-  jobStatus: z.enum(JOB_STATUSES).optional().default("pendiente"),
+  jobStatus: z.enum(JOB_STATUS_KEYS as [JobStatus, ...JobStatus[]]).optional().default("pending"),
   notes: z.string().max(2000).optional().default(""),
 })
 
@@ -42,10 +47,14 @@ export async function saveJob(input: unknown) {
   const d = jobSchema.parse(input)
   const amount = d.amountEuros ? eurosToMinor(d.amountEuros) : 0
   const paid = d.paidEuros ? eurosToMinor(d.paidEuros) : 0
-  const paymentStatus = paymentStatusFor(amount, paid)
   const date = d.jobDate || null
 
   if (d.id) {
+    // Conservamos la distincion "No facturado" / "Pendiente de cobrar".
+    const linked = (await sql`SELECT invoice_id FROM jobs WHERE id = ${d.id}`) as {
+      invoice_id: number | null
+    }[]
+    const paymentStatus = paymentStatusFor(amount, paid, Boolean(linked[0]?.invoice_id))
     await sql`
       UPDATE jobs SET
         job_date = ${date}, client_name = ${d.clientName}, company = ${d.company || null},
@@ -56,6 +65,7 @@ export async function saveJob(input: unknown) {
       WHERE id = ${d.id}
     `
   } else {
+    const paymentStatus = paymentStatusFor(amount, paid, false)
     await sql`
       INSERT INTO jobs (job_date, client_name, company, venue, address, concept, description,
         start_time, end_time, amount_minor, paid_minor, job_status, payment_status, notes)
@@ -68,10 +78,10 @@ export async function saveJob(input: unknown) {
   return { ok: true }
 }
 
-export async function setJobStatus(id: number, status: (typeof JOB_STATUSES)[number]) {
+export async function setJobStatus(id: number, status: JobStatus) {
   await requireAdmin()
   z.number().int().positive().parse(id)
-  z.enum(JOB_STATUSES).parse(status)
+  z.enum(JOB_STATUS_KEYS as [JobStatus, ...JobStatus[]]).parse(status)
   await sql`UPDATE jobs SET job_status = ${status}, updated_at = now() WHERE id = ${id}`
   revalidateAll()
   return { ok: true }
@@ -82,14 +92,15 @@ export async function registerPayment(id: number, amountEuros: string) {
   await requireAdmin()
   z.number().int().positive().parse(id)
   const add = eurosToMinor(amountEuros)
-  const rows = (await sql`SELECT amount_minor, paid_minor FROM jobs WHERE id = ${id}`) as {
+  const rows = (await sql`SELECT amount_minor, paid_minor, invoice_id FROM jobs WHERE id = ${id}`) as {
     amount_minor: number
     paid_minor: number
+    invoice_id: number | null
   }[]
   const job = rows[0]
   if (!job) throw new Error("No encontrado")
   const newPaid = Math.max(0, job.paid_minor + add)
-  const status = paymentStatusFor(job.amount_minor, newPaid)
+  const status = paymentStatusFor(job.amount_minor, newPaid, Boolean(job.invoice_id))
   await sql`UPDATE jobs SET paid_minor = ${newPaid}, payment_status = ${status}, updated_at = now() WHERE id = ${id}`
   revalidateAll()
   return { ok: true }
@@ -99,7 +110,7 @@ export async function registerPayment(id: number, amountEuros: string) {
 export async function markFullyPaid(id: number) {
   await requireAdmin()
   z.number().int().positive().parse(id)
-  await sql`UPDATE jobs SET paid_minor = amount_minor, payment_status = 'cobrado', updated_at = now() WHERE id = ${id}`
+  await sql`UPDATE jobs SET paid_minor = amount_minor, payment_status = 'paid', updated_at = now() WHERE id = ${id}`
   revalidateAll()
   return { ok: true }
 }

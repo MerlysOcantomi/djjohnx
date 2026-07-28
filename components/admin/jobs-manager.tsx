@@ -12,6 +12,7 @@ import {
   JOB_STATUSES,
 } from "@/app/actions/jobs"
 import { formatEurFromMinor, formatDateEs } from "@/lib/format"
+import { jobStatusLabel, paymentStatusLabel } from "@/lib/status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -54,27 +55,17 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-const STATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente",
-  confirmado: "Confirmado",
-  realizado: "Realizado",
-  cancelado: "Cancelado",
-}
 const STATUS_STYLE: Record<string, string> = {
-  pendiente: "bg-muted text-muted-foreground",
-  confirmado: "bg-primary/20 text-primary",
-  realizado: "bg-emerald-500/20 text-emerald-400",
-  cancelado: "bg-destructive/20 text-destructive",
-}
-const PAY_LABEL: Record<string, string> = {
-  pendiente: "Sin cobrar",
-  parcial: "Parcial",
-  cobrado: "Cobrado",
+  pending: "bg-muted text-muted-foreground",
+  confirmed: "bg-primary/20 text-primary",
+  completed: "bg-emerald-500/20 text-emerald-400",
+  cancelled: "bg-destructive/20 text-destructive",
 }
 const PAY_STYLE: Record<string, string> = {
-  pendiente: "bg-destructive/20 text-destructive",
-  parcial: "bg-amber-500/20 text-amber-400",
-  cobrado: "bg-emerald-500/20 text-emerald-400",
+  not_invoiced: "bg-muted text-muted-foreground",
+  pending: "bg-destructive/20 text-destructive",
+  partially_paid: "bg-amber-500/20 text-amber-400",
+  paid: "bg-emerald-500/20 text-emerald-400",
 }
 
 type Draft = {
@@ -112,7 +103,7 @@ function toDraft(j?: Job): Draft {
     endTime: j?.end_time ?? "",
     amountEuros: minorToEurStr(j?.amount_minor ?? 0),
     paidEuros: minorToEurStr(j?.paid_minor ?? 0),
-    jobStatus: (j?.job_status as Draft["jobStatus"]) ?? "pendiente",
+    jobStatus: (j?.job_status as Draft["jobStatus"]) ?? "pending",
     notes: j?.notes ?? "",
   }
 }
@@ -132,7 +123,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
     let collected = 0
     let pending = 0
     for (const j of jobs) {
-      if ((j.job_status || "").toLowerCase() === "cancelado") continue
+      if (j.job_status === "cancelled") continue
       collected += j.paid_minor
       pending += Math.max(0, j.amount_minor - j.paid_minor)
     }
@@ -141,8 +132,10 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
 
   const visible = useMemo(() => {
     if (filter === "todos") return jobs
-    if (filter === "por-cobrar") return jobs.filter((j) => j.payment_status !== "cobrado" && (j.job_status || "").toLowerCase() !== "cancelado")
-    return jobs.filter((j) => (j.job_status || "").toLowerCase() === filter)
+    if (filter === "por-cobrar") {
+      return jobs.filter((j) => j.payment_status !== "paid" && j.job_status !== "cancelled")
+    }
+    return jobs.filter((j) => j.job_status === filter)
   }, [jobs, filter])
 
   function openNew() {
@@ -236,10 +229,10 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="por-cobrar">Por cobrar</SelectItem>
-            <SelectItem value="pendiente">Pendientes</SelectItem>
-            <SelectItem value="confirmado">Confirmados</SelectItem>
-            <SelectItem value="realizado">Realizados</SelectItem>
-            <SelectItem value="cancelado">Cancelados</SelectItem>
+            <SelectItem value="pending">Pendientes</SelectItem>
+            <SelectItem value="confirmed">Confirmados</SelectItem>
+            <SelectItem value="completed">Realizados</SelectItem>
+            <SelectItem value="cancelled">Cancelados</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -257,9 +250,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-foreground">{j.client_name}</p>
                       <Badge className={STATUS_STYLE[(j.job_status || "").toLowerCase()] || ""}>
-                        {STATUS_LABEL[(j.job_status || "").toLowerCase()] || j.job_status}
+                        {jobStatusLabel(j.job_status)}
                       </Badge>
-                      <Badge className={PAY_STYLE[j.payment_status] || ""}>{PAY_LABEL[j.payment_status] || j.payment_status}</Badge>
+                      <Badge className={PAY_STYLE[j.payment_status] || ""}>{paymentStatusLabel(j.payment_status)}</Badge>
                     </div>
                     {j.concept && <p className="text-sm text-muted-foreground">{j.concept}</p>}
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -295,7 +288,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                     <SelectContent>
                       {JOB_STATUSES.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
+                          {jobStatusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -365,7 +358,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                     <SelectContent>
                       {JOB_STATUSES.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
+                          {jobStatusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>

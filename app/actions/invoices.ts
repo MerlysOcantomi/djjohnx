@@ -62,6 +62,32 @@ function n(v: string | null | undefined) {
   return t === "" ? null : t
 }
 
+/**
+ * Asigna el siguiente numero de factura de forma atomica.
+ *
+ * Un unico INSERT ... ON CONFLICT DO UPDATE ... RETURNING incrementa y
+ * devuelve el contador en la misma sentencia, asi que dos emisiones
+ * simultaneas nunca reciben el mismo numero. Los numeros anulados no se
+ * reutilizan porque el contador solo avanza.
+ *
+ * `startAt` es el "siguiente numero" configurado en /admin/configuracion y
+ * solo se aplica la primera vez que se usa un prefijo en un anio.
+ */
+export async function assignInvoiceNumber(prefix: string, startAt = 1): Promise<string> {
+  const year = new Date().getFullYear()
+  const first = Number.isFinite(startAt) && startAt > 0 ? Math.floor(startAt) : 1
+  const rows = (await sql`
+    INSERT INTO invoice_counters (prefix, year, next_number)
+    VALUES (${prefix}, ${year}, ${first + 1})
+    ON CONFLICT (prefix, year) DO UPDATE
+      SET next_number = invoice_counters.next_number + 1,
+          updated_at = now()
+    RETURNING next_number - 1 AS assigned
+  `) as { assigned: number }[]
+  const assigned = rows[0]?.assigned ?? first
+  return `${prefix}-${year}-${String(assigned).padStart(3, "0")}`
+}
+
 async function persistInvoice(input: InvoiceInput, issue: boolean) {
   await requireAdmin()
   const data = invoiceSchema.parse(input)
@@ -88,25 +114,20 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
   let status = data.status
 
   if (issue) {
-    // Numero definitivo asignado de forma segura e incremental.
-    const settings = await getSettings()
-    const prefix = settings.billing.prefix || "DJ"
-    const year = new Date().getFullYear()
-    // Bloqueo optimista: siguiente numero = max existente + 1 para el prefijo/anio.
-    const like = `${prefix}-${year}-%`
-    const rows = (await sql`
-      SELECT number FROM invoices
-      WHERE number LIKE ${like}
-      ORDER BY number DESC
-      LIMIT 1
-    `) as { number: string }[]
-    let next = 1
-    if (rows[0]) {
-      const parts = rows[0].number.split("-")
-      const last = Number.parseInt(parts[parts.length - 1] || "0", 10)
-      if (Number.isFinite(last)) next = last + 1
+    // Solo se numera al emitir; los borradores no consumen numero.
+    // Si la factura ya tenia numero definitivo, se conserva.
+    const current = invoiceId
+      ? ((await sql`SELECT number, status FROM invoices WHERE id = ${invoiceId}`) as {
+          number: string
+          status: string
+        }[])[0]
+      : undefined
+    if (current && current.number && current.number !== "BORRADOR") {
+      number = current.number
+    } else {
+      const settings = await getSettings()
+      number = await assignInvoiceNumber(settings.billing.prefix || "DJ", settings.billing.nextNumber)
     }
-    number = `${prefix}-${year}-${String(next).padStart(3, "0")}`
     status = "issued"
   }
 
@@ -202,7 +223,9 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
   if (data.jobId) {
     await sql`
       UPDATE jobs SET invoice_id = ${invoiceId},
-        payment_status = CASE WHEN payment_status = 'not_invoiced' THEN 'pending' ELSE payment_status END,
+        payment_status = CASE
+          WHEN lower(payment_status) IN ('not_invoiced', 'no facturado') THEN 'pending'
+          ELSE payment_status END,
         updated_at = now()
       WHERE id = ${data.jobId}
     `
@@ -294,7 +317,9 @@ export async function deleteInvoice(id: number) {
   if (rows[0].job_id) {
     await sql`
       UPDATE jobs SET invoice_id = NULL,
-        payment_status = CASE WHEN payment_status = 'pending' THEN 'not_invoiced' ELSE payment_status END,
+        payment_status = CASE
+          WHEN lower(payment_status) IN ('pending', 'pendiente') THEN 'not_invoiced'
+          ELSE payment_status END,
         updated_at = now()
       WHERE id = ${rows[0].job_id}
     `
@@ -318,17 +343,32 @@ export async function createInvoiceFromJob(jobId: number) {
   const settings = await getSettings()
   const concept = (job.concept as string) || "Servicio de DJ"
   const amount = (job.amount_minor as number) || 0
+
+  // Mismo motor de calculo que el resto de la aplicacion (Fase 12).
+  const calc = calculateInvoice({
+    lines: [{ quantity: 1, unitPriceMinor: amount }],
+    discountType: "none",
+    discountPercent: 0,
+    discountValueMinor: 0,
+    vatEnabled: true,
+    vatPercent: settings.billing.vatPercent,
+    irpfEnabled: false,
+    irpfPercent: settings.billing.irpfPercent,
+  })
+
+  const clientName = (job.client_name as string) || (job.company as string) || null
   const created = (await sql`
     INSERT INTO invoices (
       number, status, issue_date, currency, job_id,
-      client_name, discount_type, vat_enabled, vat_percent, irpf_enabled, irpf_percent,
-      subtotal_minor, base_minor, vat_minor, total_minor,
-      payment_holder, payment_iban, payment_bic, payment_terms
+      client_name, client_address, discount_type, vat_enabled, vat_percent, irpf_enabled, irpf_percent,
+      subtotal_minor, discount_minor, base_minor, vat_minor, irpf_minor, total_minor,
+      payment_holder, payment_iban, payment_bic, payment_terms, client_notes
     ) VALUES (
       'BORRADOR', 'draft', ${new Date().toISOString().slice(0, 10)}, ${settings.billing.currency}, ${jobId},
-      ${(job.client_name as string) || null}, 'none', true, ${settings.billing.vatPercent}, false, ${settings.billing.irpfPercent},
-      ${amount}, ${amount}, ${Math.round((amount * settings.billing.vatPercent) / 100)}, ${amount + Math.round((amount * settings.billing.vatPercent) / 100)},
-      ${settings.billing.bankHolder || null}, ${settings.billing.iban || null}, ${settings.billing.bic || null}, ${settings.billing.paymentTerms || null}
+      ${clientName}, ${(job.address as string) || null}, 'none', true, ${settings.billing.vatPercent}, false, ${settings.billing.irpfPercent},
+      ${calc.subtotalMinor}, ${calc.discountMinor}, ${calc.baseMinor}, ${calc.vatMinor}, ${calc.irpfMinor}, ${calc.totalMinor},
+      ${settings.billing.bankHolder || null}, ${settings.billing.iban || null}, ${settings.billing.bic || null},
+      ${settings.billing.paymentTerms || null}, ${settings.billing.conditions || null}
     ) RETURNING id
   `) as { id: number }[]
   const newId = created[0].id
