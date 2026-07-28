@@ -1,0 +1,112 @@
+{
+  "hero": {
+    "backgroundImage": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/facebook_1778951869128_7461464940495022770-zB1r4yIazjXJjULMBGCScAy2LPyCbt.jpg",
+    "backgroundPosition": "center 68%",
+    "badge": "MUSICO, POETA Y LOCO",
+    "title": "DJ JOHNX",
+    "subtitle": "FUSION LATINA",
+    "description": "Desde Cuba al mundo. Reggaeton, Salsa, Bachata, Timba y toda la fusion latina que mueve tu cuerpo."
+  },
+  "about": {
+    "image": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/DJ%20JOHN%20X%20SOBRE%20MI%20-CACbHeXBaQUErfIPp0NsY2TyUs5JYi.png",
+    "title": "SOBRE MI",
+    "description": "Amo la musica, y no podia ser de otra manera. Creci en una familia de musicos, en una casa donde la musica nunca falto y donde cada celebracion, cada historia y cada recuerdo tenian su propio ritmo. Soy el nieto de Virginia Gonzalez, hijo de Charite y sobrino de Armando Aguiar Gonzalez, Papaito, percusionista y rumbero. Con esa raiz, con esa sangre y con esa herencia, la musica tenia que formar parte de mi vida.",
+    "stats": [
+      { "number": "10+", "label": "Anos de experiencia" },
+      { "number": "300+", "label": "Eventos realizados" },
+      { "number": "20+", "label": "Generos musicales" },
+      { "number": "2", "label": "Europa y Caribe" }
+    ]
+  },
+  "events": {
+    "title": "PROXIMOS EVENTOS",
+    "eventName": "BABYLON 2.0",
+    "image": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JOHN%20NEON-Y89f6oQAVVw7y47AVRkH8pLFPQ9Z1q.png",
+    "venue": "Babylon 2.0",
+    "location": "San Pedro del Pinatar, Murcia",
+    "schedule": "Todos los Jueves",
+    "session": "REPARTO CUBANO"
+  },
+  "gallery": [
+    {
+      "id": 1,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JOHN%20DCUBA%20BANDERA%20CUBANA-x0zTrh2CEB6AM14BtZ5x3l1X6xcj1v.jpg",
+      "alt": "DJ JOHNX frente al restaurante D'Cuba con la bandera cubana",
+      "category": "D'Cuba"
+    },
+    {
+      "id": 2,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JOHN%20Y%20MERLYS%20EN%20LA%20EMBAJADA%20DE%20CUBA%20ANTIGUA-x8SBXGCB5QuW9PstSYljA1UzMB4bOU.jpg",
+      "alt": "DJ JOHNX y Merlys en la Embajada de Cuba en Antigua",
+      "category": "Viajes"
+    },
+    {
+      "id": 3,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/DJ%20JOHN%20Y%20YOMIL-y30PojjvcDWick3STWBV1rEZGf2CNq.jpg",
+      "alt": "DJ JOHNX con Yomil en sesion nocturna",
+      "category": "Artistas"
+    },
+    {
+      "id": 4,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/facebook_1778951869128_7461464940495022770-zB1r4yIazjXJjULMBGCScAy2LPyCbt.jpg",
+      "alt": "DJ JOHNX en escenario tropical",
+      "category": "Fiestas"
+    },
+    {
+      "id": 5,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.27%20AM%20%282%29-REAmCnhS7U6FdU82Aca5GQAZsuPY95.jpeg",
+      "alt": "DJ JOHNX frente a Que Cache Disco Pub",
+      "category": "Clubs"
+    },
+    {
+      "id": 6,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-16%20at%209.48.18%20PM-gHycCemBw0RK0BrybLqeQ15fiHTjf0.jpeg",
+      "alt": "DJ JOHNX en club con luces azules",
+      "category": "Sessions"
+    },
+    {
+      "id": 7,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.26%20AM-6zhDqXNuxBcY9Lmc7LRGwII8qjmpBD.jpeg",
+      "alt": "DJ JOHNX selfie con gorra X",
+      "category": "Sessions"
+    },
+    {
+      "id": 8,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.25%20AM-p7vVRhAUfzyNEISKXI5XdDFJewxgHK.jpeg",
+      "alt": "Concierto Un Titico en Parole Club - DJ JOHNX invitado",
+      "category": "Eventos"
+    },
+    {
+      "id": 9,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.26%20AM%20%283%29-PqhQl0bwLkeBMJBdoIzjGQp9TcIWxt.jpeg",
+      "alt": "DJ JOHNX mezclando con bandera cubana",
+      "category": "D'Cuba"
+    },
+    {
+      "id": 10,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.27%20AM%20%283%29-xNvwmePsuVkOlB08sD6h7OYXkG7WfF.jpeg",
+      "alt": "DJ JOHNX en Culture Music Club",
+      "category": "Clubs"
+    },
+    {
+      "id": 11,
+      "src": "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-05-17%20at%2012.45.27%20AM-jFNM8o1dYNsR8GDADorkgg6yW02v14.jpeg",
+      "alt": "DJ JOHNX en La Ceiba restaurante cubano",
+      "category": "D'Cuba"
+    }
+  ],
+  "video": {
+    "title": "MUSICO, POETA Y LOCO",
+    "youtubeId": "Mo1ri6aCWCA",
+    "description": "Descubre la energia y el sabor cubano en cada sesion"
+  },
+  "contact": {
+    "email": "booking@djjohnx.com",
+    "phone": "+34 672 176 890",
+    "whatsappNumber": "34672176890",
+    "location": "Alicante, Espana",
+    "instagram": "https://www.instagram.com/dj_john_x/",
+    "facebook": "#",
+    "youtube": "https://youtu.be/Mo1ri6aCWCA"
+  }
+}
