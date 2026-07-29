@@ -29,6 +29,7 @@ type EditorLine = {
 type Prefill = {
   jobId?: number
   clientName?: string | null
+  clientAddress?: string | null
   issueDate?: string | null
   lines?: { serviceDate: string | null; concept: string; description: string; quantity: number; unitPriceMinor: number }[]
 } | null
@@ -61,13 +62,14 @@ export function InvoiceEditor({
 
   const [issueDate, setIssueDate] = useState(invoice?.issue_date ?? prefill?.issueDate ?? today())
   const [dueDate, setDueDate] = useState(invoice?.due_date ?? "")
-  const [jobId] = useState<number | null>(invoice?.job_id ?? prefill?.jobId ?? null)
+  // El trabajo vinculado no se edita desde aqui: es una constante, no estado.
+  const jobId: number | null = invoice?.job_id ?? prefill?.jobId ?? null
   const currency = invoice?.currency ?? initialValues?.currency ?? "EUR"
 
   const [client, setClient] = useState({
     name: invoice?.client_name ?? prefill?.clientName ?? "",
     taxId: invoice?.client_tax_id ?? "",
-    address: invoice?.client_address ?? "",
+    address: invoice?.client_address ?? prefill?.clientAddress ?? "",
     postalCode: invoice?.client_postal_code ?? "",
     city: invoice?.client_city ?? "",
     province: invoice?.client_province ?? "",

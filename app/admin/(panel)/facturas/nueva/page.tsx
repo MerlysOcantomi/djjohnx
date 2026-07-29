@@ -17,15 +17,24 @@ export default async function NuevaFacturaPage({
   if (Number.isFinite(jobId)) {
     const job = await getJob(jobId)
     if (job) {
+      // Se factura a la empresa cuando existe; si no, al cliente particular.
+      // El nombre de contacto se conserva en la descripcion de la linea.
+      const billTo = job.company?.trim() || job.client_name
+      const contact =
+        job.company?.trim() && job.client_name ? `Contacto: ${job.client_name}` : ""
+      const place = [job.venue, job.address].filter(Boolean).join(" · ")
+      const description = [job.description, contact, place].filter(Boolean).join("\n")
+
       prefill = {
         jobId: job.id,
-        clientName: job.client_name,
+        clientName: billTo,
+        clientAddress: job.address,
         issueDate: job.job_date,
         lines: [
           {
             serviceDate: job.job_date,
             concept: job.concept || "Servicio de DJ",
-            description: job.description || "",
+            description,
             quantity: 1,
             unitPriceMinor: job.amount_minor,
           },

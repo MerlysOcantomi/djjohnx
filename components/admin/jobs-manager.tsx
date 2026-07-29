@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useMemo, useTransition } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import type { Job } from "@/lib/data"
 import {
   saveJob,
@@ -9,9 +9,12 @@ import {
   registerPayment,
   markFullyPaid,
   deleteJob,
-  JOB_STATUSES,
 } from "@/app/actions/jobs"
 import { formatEurFromMinor, formatDateEs } from "@/lib/format"
+// Las constantes y tipos vienen de lib/status.ts, no de las Server Actions:
+// en un modulo "use server" cualquier export se convierte en una referencia
+// de servidor, asi que en el cliente no llegaria el array.
+import { JOB_STATUS_KEYS, type JobStatus, jobStatusLabel, paymentStatusLabel } from "@/lib/status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
@@ -54,27 +58,17 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-const STATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente",
-  confirmado: "Confirmado",
-  realizado: "Realizado",
-  cancelado: "Cancelado",
-}
 const STATUS_STYLE: Record<string, string> = {
-  pendiente: "bg-muted text-muted-foreground",
-  confirmado: "bg-primary/20 text-primary",
-  realizado: "bg-emerald-500/20 text-emerald-400",
-  cancelado: "bg-destructive/20 text-destructive",
-}
-const PAY_LABEL: Record<string, string> = {
-  pendiente: "Sin cobrar",
-  parcial: "Parcial",
-  cobrado: "Cobrado",
+  pending: "bg-muted text-muted-foreground",
+  confirmed: "bg-primary/20 text-primary",
+  completed: "bg-emerald-500/20 text-emerald-400",
+  cancelled: "bg-destructive/20 text-destructive",
 }
 const PAY_STYLE: Record<string, string> = {
-  pendiente: "bg-destructive/20 text-destructive",
-  parcial: "bg-amber-500/20 text-amber-400",
-  cobrado: "bg-emerald-500/20 text-emerald-400",
+  not_invoiced: "bg-muted text-muted-foreground",
+  pending: "bg-destructive/20 text-destructive",
+  partially_paid: "bg-amber-500/20 text-amber-400",
+  paid: "bg-emerald-500/20 text-emerald-400",
 }
 
 type Draft = {
@@ -90,7 +84,7 @@ type Draft = {
   endTime: string
   amountEuros: string
   paidEuros: string
-  jobStatus: (typeof JOB_STATUSES)[number]
+  jobStatus: JobStatus
   notes: string
 }
 
@@ -112,14 +106,17 @@ function toDraft(j?: Job): Draft {
     endTime: j?.end_time ?? "",
     amountEuros: minorToEurStr(j?.amount_minor ?? 0),
     paidEuros: minorToEurStr(j?.paid_minor ?? 0),
-    jobStatus: (j?.job_status as Draft["jobStatus"]) ?? "pendiente",
+    jobStatus: (j?.job_status as Draft["jobStatus"]) ?? "pending",
     notes: j?.notes ?? "",
   }
 }
 
 export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
   const router = useRouter()
-  const [jobs] = useState<Job[]>(initialJobs)
+  // Los trabajos vienen del Server Component y se refrescan con router.refresh().
+  // No se guardan en useState: eso congelaria la lista con los props iniciales
+  // y los cambios no se verian hasta recargar la pagina a mano.
+  const jobs = initialJobs
   const [filter, setFilter] = useState<string>("todos")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [open, setOpen] = useState(false)
@@ -128,11 +125,37 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
   const [deleting, setDeleting] = useState<Job | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // El resumen enlaza aqui con ?nuevo=1 o ?editar=<id> para abrir el
+  // formulario directamente, ya que los trabajos no tienen pagina propia.
+  // El parametro se limpia nada mas consumirlo: si no, cada router.refresh()
+  // posterior volveria a abrir el dialogo.
+  const searchParams = useSearchParams()
+  const nuevo = searchParams.get("nuevo")
+  const editar = searchParams.get("editar")
+  useEffect(() => {
+    if (!nuevo && !editar) return
+
+    if (nuevo) {
+      setDraft(toDraft())
+      setOpen(true)
+    } else {
+      const job = initialJobs.find((j) => j.id === Number(editar))
+      if (job) {
+        setDraft(toDraft(job))
+        setOpen(true)
+      }
+    }
+    // Al limpiar el parametro, la siguiente ejecucion del efecto sale por el
+    // return de arriba. Por eso puede depender de initialJobs sin que cada
+    // router.refresh() reabra el dialogo.
+    router.replace("/admin/trabajos", { scroll: false })
+  }, [nuevo, editar, router, initialJobs])
+
   const kpis = useMemo(() => {
     let collected = 0
     let pending = 0
     for (const j of jobs) {
-      if ((j.job_status || "").toLowerCase() === "cancelado") continue
+      if (j.job_status === "cancelled") continue
       collected += j.paid_minor
       pending += Math.max(0, j.amount_minor - j.paid_minor)
     }
@@ -141,8 +164,10 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
 
   const visible = useMemo(() => {
     if (filter === "todos") return jobs
-    if (filter === "por-cobrar") return jobs.filter((j) => j.payment_status !== "cobrado" && (j.job_status || "").toLowerCase() !== "cancelado")
-    return jobs.filter((j) => (j.job_status || "").toLowerCase() === filter)
+    if (filter === "por-cobrar") {
+      return jobs.filter((j) => j.payment_status !== "paid" && j.job_status !== "cancelled")
+    }
+    return jobs.filter((j) => j.job_status === filter)
   }, [jobs, filter])
 
   function openNew() {
@@ -172,7 +197,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
     })
   }
 
-  function changeStatus(j: Job, status: (typeof JOB_STATUSES)[number]) {
+  function changeStatus(j: Job, status: JobStatus) {
     startTransition(async () => {
       await setJobStatus(j.id, status)
       router.refresh()
@@ -236,10 +261,10 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="por-cobrar">Por cobrar</SelectItem>
-            <SelectItem value="pendiente">Pendientes</SelectItem>
-            <SelectItem value="confirmado">Confirmados</SelectItem>
-            <SelectItem value="realizado">Realizados</SelectItem>
-            <SelectItem value="cancelado">Cancelados</SelectItem>
+            <SelectItem value="pending">Pendientes</SelectItem>
+            <SelectItem value="confirmed">Confirmados</SelectItem>
+            <SelectItem value="completed">Realizados</SelectItem>
+            <SelectItem value="cancelled">Cancelados</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -257,9 +282,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-foreground">{j.client_name}</p>
                       <Badge className={STATUS_STYLE[(j.job_status || "").toLowerCase()] || ""}>
-                        {STATUS_LABEL[(j.job_status || "").toLowerCase()] || j.job_status}
+                        {jobStatusLabel(j.job_status)}
                       </Badge>
-                      <Badge className={PAY_STYLE[j.payment_status] || ""}>{PAY_LABEL[j.payment_status] || j.payment_status}</Badge>
+                      <Badge className={PAY_STYLE[j.payment_status] || ""}>{paymentStatusLabel(j.payment_status)}</Badge>
                     </div>
                     {j.concept && <p className="text-sm text-muted-foreground">{j.concept}</p>}
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -288,14 +313,14 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Select value={(j.job_status || "").toLowerCase()} onValueChange={(v) => changeStatus(j, v as (typeof JOB_STATUSES)[number])}>
+                  <Select value={(j.job_status || "").toLowerCase()} onValueChange={(v) => changeStatus(j, v as JobStatus)}>
                     <SelectTrigger className="h-8 w-36 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {JOB_STATUSES.map((s) => (
+                      {JOB_STATUS_KEYS.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
+                          {jobStatusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -338,6 +363,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{draft?.id ? "Editar trabajo" : "Nuevo trabajo"}</DialogTitle>
+            <DialogDescription>
+              Datos del bolo: cliente, lugar, horario, importe y estado. Solo el cliente es obligatorio.
+            </DialogDescription>
           </DialogHeader>
           {draft && (
             <div className="space-y-3">
@@ -363,9 +391,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {JOB_STATUSES.map((s) => (
+                      {JOB_STATUS_KEYS.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
+                          {jobStatusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -426,6 +454,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Registrar cobro</DialogTitle>
+            <DialogDescription>
+              El importe se suma a lo ya cobrado y actualiza el estado de pago.
+            </DialogDescription>
           </DialogHeader>
           {payFor && (
             <div className="space-y-3">

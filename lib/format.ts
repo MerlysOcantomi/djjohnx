@@ -13,27 +13,32 @@ export function numberToMinor(value: number): number {
   return Math.round(value * 100)
 }
 
+/**
+ * es-ES agrupa por defecto con la regla "min2": no pone separador de millar
+ * hasta cinco digitos, asi que 1250 se mostraria como "1250,00 €".
+ * Forzamos el separador para obtener siempre el formato pedido: 1.250,00 €.
+ */
+const CURRENCY_OPTIONS: Intl.NumberFormatOptions = {
+  style: "currency",
+  currency: "EUR",
+  useGrouping: "always",
+}
+
 /** Formatea centimos como moneda es-ES: 1.250,00 € */
 export function formatEurFromMinor(minor: number): string {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }).format(minorToNumber(minor))
+  return new Intl.NumberFormat("es-ES", CURRENCY_OPTIONS).format(minorToNumber(minor))
 }
 
 /** Formatea un numero decimal como moneda es-ES. */
 export function formatEur(value: number): string {
   const safe = Number.isFinite(value) ? value : 0
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }).format(safe)
+  return new Intl.NumberFormat("es-ES", CURRENCY_OPTIONS).format(safe)
 }
 
 /** Formatea centimos como moneda es-ES admitiendo la divisa (por defecto EUR). */
 export function formatMoneyMinor(minor: number, currency = "EUR"): string {
   return new Intl.NumberFormat("es-ES", {
-    style: "currency",
+    ...CURRENCY_OPTIONS,
     currency: currency || "EUR",
   }).format(minorToNumber(minor))
 }

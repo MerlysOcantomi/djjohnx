@@ -4,10 +4,9 @@ import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import type { Invoice } from "@/lib/data"
 import { formatMoneyMinor } from "@/lib/format"
-import { INVOICE_STATUS_LABELS } from "@/lib/status"
+import { invoiceStatusLabel } from "@/lib/status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -123,7 +122,7 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{inv.number}</span>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusVariant[inv.status] ?? ""}`}>
-                    {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
+                    {invoiceStatusLabel(inv.status)}
                   </span>
                 </div>
                 <p className="truncate text-sm text-muted-foreground">

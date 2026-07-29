@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -67,6 +67,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // Cerrar el menu con Escape y evitar que el fondo se desplace mientras esta abierto.
+  useEffect(() => {
+    if (!mobileOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [mobileOpen])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar escritorio */}
@@ -105,12 +120,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Menu movil deslizante */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú de navegación">
           <div
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col border-r border-border/40 bg-card p-4">
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col overflow-y-auto border-r border-border/40 bg-card p-4">
             <div className="mb-6 flex items-center justify-between">
               <span className="text-xl font-black tracking-wider text-gradient-gold">DJ JOHNX</span>
               <Button

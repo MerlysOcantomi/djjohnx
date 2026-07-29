@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { calculateInvoice, type DiscountType } from "@/lib/invoice-calc"
 import { getSettings } from "@/lib/data"
+import { DRAFT_NUMBER, formatInvoiceNumber, isDraftNumber, sanitizePrefix } from "@/lib/invoice-number"
 
 const lineSchema = z.object({
   id: z.number().optional(),
@@ -62,6 +63,34 @@ function n(v: string | null | undefined) {
   return t === "" ? null : t
 }
 
+/**
+ * Asigna el siguiente numero de factura de forma atomica.
+ *
+ * Un unico INSERT ... ON CONFLICT DO UPDATE ... RETURNING incrementa y
+ * devuelve el contador en la misma sentencia, asi que dos emisiones
+ * simultaneas nunca reciben el mismo numero. Los numeros anulados no se
+ * reutilizan porque el contador solo avanza.
+ *
+ * `startAt` es el "siguiente numero" configurado en /admin/configuracion y
+ * solo se aplica la primera vez que se usa un prefijo en un anio.
+ */
+// No se exporta: en un modulo "use server" cualquier funcion exportada
+// queda expuesta como endpoint publico, y esta consume numeros de factura.
+async function assignInvoiceNumber(prefix: string, startAt = 1): Promise<string> {
+  const year = new Date().getFullYear()
+  const safePrefix = sanitizePrefix(prefix)
+  const first = Number.isFinite(startAt) && startAt > 0 ? Math.floor(startAt) : 1
+  const rows = (await sql`
+    INSERT INTO invoice_counters (prefix, year, next_number)
+    VALUES (${safePrefix}, ${year}, ${first + 1})
+    ON CONFLICT (prefix, year) DO UPDATE
+      SET next_number = invoice_counters.next_number + 1,
+          updated_at = now()
+    RETURNING next_number - 1 AS assigned
+  `) as { assigned: number }[]
+  return formatInvoiceNumber(safePrefix, year, rows[0]?.assigned ?? first)
+}
+
 async function persistInvoice(input: InvoiceInput, issue: boolean) {
   await requireAdmin()
   const data = invoiceSchema.parse(input)
@@ -88,25 +117,20 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
   let status = data.status
 
   if (issue) {
-    // Numero definitivo asignado de forma segura e incremental.
-    const settings = await getSettings()
-    const prefix = settings.billing.prefix || "DJ"
-    const year = new Date().getFullYear()
-    // Bloqueo optimista: siguiente numero = max existente + 1 para el prefijo/anio.
-    const like = `${prefix}-${year}-%`
-    const rows = (await sql`
-      SELECT number FROM invoices
-      WHERE number LIKE ${like}
-      ORDER BY number DESC
-      LIMIT 1
-    `) as { number: string }[]
-    let next = 1
-    if (rows[0]) {
-      const parts = rows[0].number.split("-")
-      const last = Number.parseInt(parts[parts.length - 1] || "0", 10)
-      if (Number.isFinite(last)) next = last + 1
+    // Solo se numera al emitir; los borradores no consumen numero.
+    // Si la factura ya tenia numero definitivo, se conserva.
+    const current = invoiceId
+      ? ((await sql`SELECT number, status FROM invoices WHERE id = ${invoiceId}`) as {
+          number: string
+          status: string
+        }[])[0]
+      : undefined
+    if (current && !isDraftNumber(current.number)) {
+      number = current.number
+    } else {
+      const settings = await getSettings()
+      number = await assignInvoiceNumber(settings.billing.prefix || "DJ", settings.billing.nextNumber)
     }
-    number = `${prefix}-${year}-${String(next).padStart(3, "0")}`
     status = "issued"
   }
 
@@ -174,7 +198,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
         payment_method, payment_holder, payment_iban, payment_bic, payment_reference,
         payment_terms, client_notes, internal_notes
       ) VALUES (
-        ${number || "BORRADOR"}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null},
+        ${number || DRAFT_NUMBER}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null},
         ${n(data.client.name)}, ${n(data.client.taxId)}, ${n(data.client.address)}, ${n(data.client.postalCode)}, ${n(data.client.city)},
         ${n(data.client.province)}, ${n(data.client.country)}, ${n(data.client.email)}, ${n(data.client.phone)},
         ${data.discountType}, ${data.discountValueMinor}, ${data.discountPercent},
@@ -202,7 +226,9 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
   if (data.jobId) {
     await sql`
       UPDATE jobs SET invoice_id = ${invoiceId},
-        payment_status = CASE WHEN payment_status = 'not_invoiced' THEN 'pending' ELSE payment_status END,
+        payment_status = CASE
+          WHEN lower(payment_status) IN ('not_invoiced', 'no facturado') THEN 'pending'
+          ELSE payment_status END,
         updated_at = now()
       WHERE id = ${data.jobId}
     `
@@ -216,10 +242,12 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
 }
 
 export async function saveInvoice(input: InvoiceInput) {
+  await requireAdmin()
   return persistInvoice(input, false)
 }
 
 export async function issueInvoice(input: InvoiceInput) {
+  await requireAdmin()
   return persistInvoice(input, true)
 }
 
@@ -294,7 +322,9 @@ export async function deleteInvoice(id: number) {
   if (rows[0].job_id) {
     await sql`
       UPDATE jobs SET invoice_id = NULL,
-        payment_status = CASE WHEN payment_status = 'pending' THEN 'not_invoiced' ELSE payment_status END,
+        payment_status = CASE
+          WHEN lower(payment_status) IN ('pending', 'pendiente') THEN 'not_invoiced'
+          ELSE payment_status END,
         updated_at = now()
       WHERE id = ${rows[0].job_id}
     `
@@ -302,47 +332,4 @@ export async function deleteInvoice(id: number) {
   await sql`DELETE FROM invoices WHERE id = ${id}`
   revalidatePath("/admin/facturas")
   revalidatePath("/admin/trabajos")
-}
-
-export async function createInvoiceFromJob(jobId: number) {
-  await requireAdmin()
-  const jobs = (await sql`SELECT * FROM jobs WHERE id = ${jobId}`) as Record<string, unknown>[]
-  const job = jobs[0]
-  if (!job) throw new Error("Trabajo no encontrado")
-
-  // Si ya tiene factura, ir a ella.
-  if (job.invoice_id) {
-    redirect(`/admin/facturas/${job.invoice_id as number}/editar`)
-  }
-
-  const settings = await getSettings()
-  const concept = (job.concept as string) || "Servicio de DJ"
-  const amount = (job.amount_minor as number) || 0
-  const created = (await sql`
-    INSERT INTO invoices (
-      number, status, issue_date, currency, job_id,
-      client_name, discount_type, vat_enabled, vat_percent, irpf_enabled, irpf_percent,
-      subtotal_minor, base_minor, vat_minor, total_minor,
-      payment_holder, payment_iban, payment_bic, payment_terms
-    ) VALUES (
-      'BORRADOR', 'draft', ${new Date().toISOString().slice(0, 10)}, ${settings.billing.currency}, ${jobId},
-      ${(job.client_name as string) || null}, 'none', true, ${settings.billing.vatPercent}, false, ${settings.billing.irpfPercent},
-      ${amount}, ${amount}, ${Math.round((amount * settings.billing.vatPercent) / 100)}, ${amount + Math.round((amount * settings.billing.vatPercent) / 100)},
-      ${settings.billing.bankHolder || null}, ${settings.billing.iban || null}, ${settings.billing.bic || null}, ${settings.billing.paymentTerms || null}
-    ) RETURNING id
-  `) as { id: number }[]
-  const newId = created[0].id
-  await sql`
-    INSERT INTO invoice_items (invoice_id, service_date, concept, description, quantity, unit_price_minor, total_minor, sort_order)
-    VALUES (${newId}, ${(job.job_date as string) || null}, ${concept}, ${(job.description as string) || null}, 1, ${amount}, ${amount}, 0)
-  `
-  await sql`
-    UPDATE jobs SET invoice_id = ${newId},
-      payment_status = CASE WHEN payment_status = 'not_invoiced' THEN 'pending' ELSE payment_status END,
-      updated_at = now()
-    WHERE id = ${jobId}
-  `
-  revalidatePath("/admin/facturas")
-  revalidatePath("/admin/trabajos")
-  redirect(`/admin/facturas/${newId}/editar`)
 }

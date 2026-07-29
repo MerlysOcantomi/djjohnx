@@ -91,7 +91,7 @@ export function PhotosManager({
         toast.error(`${file.name}: ${err}`)
         continue
       }
-      const key = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^\w.\-]/g, "_")}`
+      const key = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^\w.-]/g, "_")}`
       setUploading((u) => [...u, { name: file.name, pct: 0 }])
       try {
         const blob = await upload(key, file, {
@@ -154,7 +154,7 @@ export function PhotosManager({
       toast.error(err)
       return
     }
-    const key = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^\w.\-]/g, "_")}`
+    const key = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^\w.-]/g, "_")}`
     setUploading((u) => [...u, { name: file.name, pct: 0 }])
     try {
       const blob = await upload(key, file, {
@@ -253,7 +253,7 @@ export function PhotosManager({
           {photos.map((p, i) => (
             <div key={p.id} className="overflow-hidden rounded-lg border border-border bg-card">
               <div className="relative aspect-square bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img
                   src={p.blob_url || "/placeholder.svg"}
                   alt={p.alt_text || p.title || "Foto"}

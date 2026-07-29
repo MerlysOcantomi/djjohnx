@@ -3,6 +3,15 @@
 import Image from "next/image"
 import { Calendar, Music, Globe, Award } from "lucide-react"
 
+/** Biografia por defecto. Se usa mientras no se haya escrito una en /admin/pagina. */
+const DEFAULT_BIO = [
+  "Amo la música, y no podía ser de otra manera. Crecí en una familia de músicos, en una casa donde la música nunca faltó y donde cada celebración, cada historia y cada recuerdo tenían su propio ritmo.",
+  "Soy el nieto de Virginia González, hijo de Charité y sobrino de Armando Aguiar González, “Papaíto”, percusionista y rumbero. Con esa raíz, con esa sangre y con esa herencia, no podía ser de otra manera: la música tenía que formar parte de mi vida.",
+  "Crecí rodeado de son, salsa y rumba en las calles de La Habana, donde el ritmo forma parte de la vida desde que naces. Esa herencia musical me forjó como artista y me enseñó que la música no solo se escucha: se vive, se siente y se comparte.",
+  "Hoy, desde Alicante, fusiono lo mejor de la música latina con los sonidos más actuales: reggaetón, salsa, bachata, timba, Latin house, afrobeats y mucho más. Mi objetivo es crear experiencias musicales que hagan vibrar a cada persona en la pista de baile.",
+  "Con más de una década de experiencia entre Europa y el Caribe, he tenido el privilegio de encender pistas de baile en España, Francia, Italia y, por supuesto, en mi querida Cuba. Cada actuación es única, adaptada al público y al momento.",
+]
+
 const defaultStats = [
   { icon: Calendar, value: "10+", label: "A\u00f1os de Experiencia" },
   { icon: Music, value: "300+", label: "Eventos Realizados" },
@@ -19,8 +28,17 @@ interface AboutData {
 
 export function AboutSection({ data }: { data?: AboutData }) {
   const image = data?.image || "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/DJ%20JOHN%20X%20SOBRE%20MI%20-CACbHeXBaQUErfIPp0NsY2TyUs5JYi.png"
-  const description = data?.description || ""
-  const statsData = data?.stats || defaultStats.map(s => ({ number: s.value, label: s.label }))
+  // La biografia se escribe en /admin/pagina; los parrafos se separan con una linea en blanco.
+  const paragraphs = (() => {
+    const raw = (data?.description || "").trim()
+    if (!raw) return DEFAULT_BIO
+    const parts = raw
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    return parts.length ? parts : DEFAULT_BIO
+  })()
+  const statsData = data?.stats?.length ? data.stats : defaultStats.map((s) => ({ number: s.value, label: s.label }))
   return (
     <section id="sobre-mi" className="relative py-24 md:py-32">
       {/* Background Decoration */}
@@ -56,21 +74,11 @@ export function AboutSection({ data }: { data?: AboutData }) {
           {/* Content */}
           <div className="flex flex-col justify-center">
             <div className="space-y-4 text-foreground/70">
-              <p className="leading-relaxed">
-                {"Amo la m\u00fasica, y no pod\u00eda ser de otra manera. Crec\u00ed en una familia de m\u00fasicos, en una casa donde la m\u00fasica nunca falt\u00f3 y donde cada celebraci\u00f3n, cada historia y cada recuerdo ten\u00edan su propio ritmo."}
-              </p>
-              <p className="leading-relaxed">
-                {"Soy el nieto de Virginia Gonz\u00e1lez, hijo de Charit\u00e9 y sobrino de Armando Aguiar Gonz\u00e1lez, \u201cPapa\u00edto\u201d, percusionista y rumbero. Con esa ra\u00edz, con esa sangre y con esa herencia, no pod\u00eda ser de otra manera: la m\u00fasica ten\u00eda que formar parte de mi vida."}
-              </p>
-              <p className="leading-relaxed">
-                {"Crec\u00ed rodeado de son, salsa y rumba en las calles de La Habana, donde el ritmo forma parte de la vida desde que naces. Esa herencia musical me forj\u00f3 como artista y me ense\u00f1\u00f3 que la m\u00fasica no solo se escucha: se vive, se siente y se comparte."}
-              </p>
-              <p className="leading-relaxed">
-                {"Hoy, desde Alicante, fusiono lo mejor de la m\u00fasica latina con los sonidos m\u00e1s actuales: reggaet\u00f3n, salsa, bachata, timba, Latin house, afrobeats y mucho m\u00e1s. Mi objetivo es crear experiencias musicales que hagan vibrar a cada persona en la pista de baile."}
-              </p>
-              <p className="leading-relaxed">
-                {"Con m\u00e1s de una d\u00e9cada de experiencia entre Europa y el Caribe, he tenido el privilegio de encender pistas de baile en Espa\u00f1a, Francia, Italia y, por supuesto, en mi querida Cuba. Cada actuaci\u00f3n es \u00fanica, adaptada al p\u00fablico y al momento."}
-              </p>
+              {paragraphs.map((text, i) => (
+                <p key={i} className="leading-relaxed">
+                  {text}
+                </p>
+              ))}
             </div>
 
             {/* Stats */}

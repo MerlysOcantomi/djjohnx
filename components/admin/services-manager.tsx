@@ -22,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -140,7 +139,7 @@ export function ServicesManager({ initialServices }: { initialServices: Service[
           {services.map((s, i) => (
             <div key={s.id} className="flex gap-3 rounded-lg border border-border bg-card p-3">
               {s.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                 
                 <img src={s.image_url || "/placeholder.svg"} alt={s.title} className="h-16 w-16 shrink-0 rounded object-cover" />
               ) : (
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-muted text-xs text-muted-foreground">

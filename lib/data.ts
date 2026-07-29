@@ -1,5 +1,6 @@
 import "server-only"
 import { sql } from "@/lib/db"
+import { normalizeInvoiceStatus, normalizeJobStatus, normalizePaymentStatus } from "@/lib/status"
 
 /* ============================ Tipos ============================ */
 
@@ -250,7 +251,7 @@ export async function getSettings(): Promise<SiteSettings> {
       billing: { ...DEFAULT_SETTINGS.billing, ...(d.billing || {}) },
       appearance: { ...DEFAULT_SETTINGS.appearance, ...(d.appearance || {}) },
     }
-  } catch (e) {
+  } catch {
     console.warn("[v0] getSettings fallo, usando defaults")
     return DEFAULT_SETTINGS
   }
@@ -364,11 +365,12 @@ export async function getGalleryImages(onlyPublished = false): Promise<GalleryIm
  * componentes publicos actuales, leyendo desde Neon.
  */
 export async function getPublicContent() {
-  const [settings, sections, events, gallery] = await Promise.all([
+  const [settings, sections, events, gallery, services] = await Promise.all([
     getSettings(),
     getSections(),
     getEvents(true),
     getGalleryImages(true),
+    getServices(true),
   ])
 
   const hero = sections["hero"]
@@ -381,7 +383,6 @@ export async function getPublicContent() {
       ? {
           backgroundImage: hero.image_url || undefined,
           backgroundPosition: (hero.extra?.backgroundPosition as string) || undefined,
-          badge: (hero.extra?.badge as string) || undefined,
           title: hero.title || undefined,
           subtitle: hero.subtitle || undefined,
           description: hero.content || undefined,
@@ -402,6 +403,7 @@ export async function getPublicContent() {
           title: video.title || undefined,
           description: video.content || undefined,
           youtubeId: (video.extra?.youtubeId as string) || undefined,
+          image: video.image_url || undefined,
           visible: video.visible,
         }
       : undefined,
@@ -415,6 +417,27 @@ export async function getPublicContent() {
           session: firstEvent.description || undefined,
         }
       : undefined,
+    // Resto de eventos publicados, ademas del destacado de arriba.
+    moreEvents: events.slice(1).map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.event_date,
+      time: e.event_time,
+      venue: e.venue,
+      city: e.city,
+      image: e.image_url,
+      ticketsLink: e.tickets_link,
+    })),
+    services: services.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      image: s.image_url,
+      priceMinor: s.price_minor,
+      priceNote: s.price_note,
+      buttonText: s.button_text,
+      buttonLink: s.button_link,
+    })),
     gallery: gallery.map((g) => ({
       id: g.id,
       src: g.blob_url,
@@ -436,9 +459,19 @@ export async function getPublicContent() {
 
 /* ====================== Trabajos ====================== */
 
+/** Protege la lectura frente a filas anteriores a la migracion 0002. */
+function normalizeJobRow(j: Job): Job {
+  return {
+    ...j,
+    job_status: normalizeJobStatus(j.job_status),
+    payment_status: normalizePaymentStatus(j.payment_status),
+  }
+}
+
 export async function getJobs(): Promise<Job[]> {
   try {
-    return (await sql`SELECT * FROM jobs ORDER BY job_date DESC NULLS LAST, id DESC`) as Job[]
+    const rows = (await sql`SELECT * FROM jobs ORDER BY job_date DESC NULLS LAST, id DESC`) as Job[]
+    return rows.map(normalizeJobRow)
   } catch {
     return []
   }
@@ -446,14 +479,19 @@ export async function getJobs(): Promise<Job[]> {
 
 export async function getJob(id: number): Promise<Job | null> {
   const rows = (await sql`SELECT * FROM jobs WHERE id = ${id}`) as Job[]
-  return rows[0] ?? null
+  return rows[0] ? normalizeJobRow(rows[0]) : null
 }
 
 /* ====================== Facturas ====================== */
 
+function normalizeInvoiceRow(i: Invoice): Invoice {
+  return { ...i, status: normalizeInvoiceStatus(i.status) }
+}
+
 export async function getInvoices(): Promise<Invoice[]> {
   try {
-    return (await sql`SELECT * FROM invoices ORDER BY issue_date DESC NULLS LAST, id DESC`) as Invoice[]
+    const rows = (await sql`SELECT * FROM invoices ORDER BY issue_date DESC NULLS LAST, id DESC`) as Invoice[]
+    return rows.map(normalizeInvoiceRow)
   } catch {
     return []
   }
@@ -461,7 +499,7 @@ export async function getInvoices(): Promise<Invoice[]> {
 
 export async function getInvoice(id: number): Promise<Invoice | null> {
   const rows = (await sql`SELECT * FROM invoices WHERE id = ${id}`) as Invoice[]
-  return rows[0] ?? null
+  return rows[0] ? normalizeInvoiceRow(rows[0]) : null
 }
 
 export async function getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {
@@ -498,19 +536,18 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     let jobsCompleted = 0
 
     for (const j of jobs) {
-      const st = (j.job_status || "").toLowerCase()
-      if (st === "cancelled" || st === "cancelado") continue
+      const st = normalizeJobStatus(j.job_status)
+      if (st === "cancelled") continue
       collectedMinor += j.paid_minor
       pendingMinor += Math.max(0, j.amount_minor - j.paid_minor)
-      if (st === "pending" || st === "pendiente") jobsPending++
-      else if (st === "confirmed" || st === "confirmado") jobsConfirmed++
-      else if (st === "completed" || st === "realizado") jobsCompleted++
+      if (st === "pending") jobsPending++
+      else if (st === "confirmed") jobsConfirmed++
+      else if (st === "completed") jobsCompleted++
     }
 
-    const invoicesDraft = invoices.filter((i) => i.status === "draft" || i.status === "Borrador").length
-    const invoicesPending = invoices.filter(
-      (i) => i.status === "issued" || i.status === "sent" || i.status === "Emitida" || i.status === "Enviada",
-    ).length
+    const statuses = invoices.map((i) => normalizeInvoiceStatus(i.status))
+    const invoicesDraft = statuses.filter((s) => s === "draft").length
+    const invoicesPending = statuses.filter((s) => s === "issued" || s === "sent").length
 
     return {
       jobsTotal: jobs.length,
@@ -538,12 +575,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
 export async function getUpcomingJobs(limit = 5): Promise<Job[]> {
   try {
-    return (await sql`
+    const rows = (await sql`
       SELECT * FROM jobs
-      WHERE job_status IN ('pending', 'confirmed', 'Pendiente', 'Confirmado')
+      WHERE lower(job_status) IN ('pending', 'confirmed', 'pendiente', 'confirmado')
       ORDER BY job_date ASC NULLS LAST, id DESC
       LIMIT ${limit}
     `) as Job[]
+    return rows.map(normalizeJobRow)
   } catch {
     return []
   }

@@ -2,6 +2,8 @@ import { Navbar } from "@/components/navbar"
 import { Hero } from "@/components/hero"
 import { AboutSection } from "@/components/about-section"
 import { EventsSection } from "@/components/events-section"
+import { MoreEvents } from "@/components/more-events"
+import { ServicesSection } from "@/components/services-section"
 import { GallerySection } from "@/components/gallery-section"
 import { VideoSection } from "@/components/video-section"
 import { ContactSection } from "@/components/contact-section"
@@ -20,7 +22,7 @@ export default async function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <Hero data={content?.hero} />
+      {content?.hero?.visible !== false && <Hero data={content?.hero} />}
 
       {/* Marquee Banner */}
       <div className="overflow-hidden border-y border-border/30 bg-muted/30 py-4">
@@ -65,6 +67,12 @@ export default async function Home() {
 
       {/* Events Section */}
       {content?.events && <EventsSection data={content?.events} />}
+
+      {/* Resto de eventos publicados */}
+      <MoreEvents data={content?.moreEvents} />
+
+      {/* Services Section */}
+      <ServicesSection data={content?.services} />
 
       {/* Gallery Section */}
       <GallerySection data={content?.gallery} />

@@ -1,5 +1,5 @@
 import type { Invoice, InvoiceItem, SiteSettings } from "@/lib/data"
-import { formatMoneyMinor, formatQty } from "@/lib/format"
+import { formatMoneyMinor, formatQty, formatDateEs } from "@/lib/format"
 
 /**
  * Plantilla profesional de factura en A4.
@@ -36,7 +36,7 @@ export function InvoiceTemplate({
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
           style={{ opacity: 0.05 }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img src={logoUrl || "/placeholder.svg"} alt="" style={{ width: "60%", maxWidth: 420 }} />
         </div>
       )}
@@ -46,7 +46,7 @@ export function InvoiceTemplate({
         <header className={`flex justify-between gap-6 ${headerAlign}`}>
           <div>
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img
                 src={logoUrl || "/placeholder.svg"}
                 alt={profile.artistName || "Logo"}
@@ -60,10 +60,10 @@ export function InvoiceTemplate({
             <h1 className="text-3xl font-black tracking-tight">FACTURA</h1>
             <p className="mt-1 text-sm font-semibold">{invoice.number}</p>
             {invoice.issue_date && (
-              <p className="text-xs text-neutral-600">Fecha: {invoice.issue_date}</p>
+              <p className="text-xs text-neutral-600">Fecha: {formatDateEs(invoice.issue_date)}</p>
             )}
             {invoice.due_date && (
-              <p className="text-xs text-neutral-600">Vencimiento: {invoice.due_date}</p>
+              <p className="text-xs text-neutral-600">Vencimiento: {formatDateEs(invoice.due_date)}</p>
             )}
           </div>
         </header>
@@ -116,7 +116,7 @@ export function InvoiceTemplate({
           <tbody>
             {items.map((it) => (
               <tr key={it.id} className="border-b border-neutral-200 align-top">
-                <td className="py-2 pr-2 whitespace-nowrap">{it.service_date || ""}</td>
+                <td className="py-2 pr-2 whitespace-nowrap">{formatDateEs(it.service_date)}</td>
                 <td className="py-2 pr-2">
                   <span className="font-medium">{it.concept}</span>
                   {it.description && <span className="block text-neutral-500">{it.description}</span>}
