@@ -77,6 +77,22 @@ describe("proteccion de las Server Actions privadas", () => {
       expect(source.includes('"use client"')).toBe(false)
     }
   })
+
+  // En un modulo "use server" Next.js convierte cada export en una referencia
+  // de servidor. Si se exporta una constante y un Client Component la importa,
+  // en el navegador no recibe el valor sino un proxy: por ejemplo un array
+  // exportado asi fallaba con "map is not a function" al abrir "Nuevo trabajo".
+  // Las constantes compartidas van en lib/, no aqui.
+  for (const file of files) {
+    const source = readFileSync(join(ACTIONS_DIR, file), "utf8")
+    it(`${file} solo exporta funciones asincronas y tipos`, () => {
+      const valueExports = source
+        .split("\n")
+        .filter((line) => /^export\s+(const|let|var|class|enum|function)\b/.test(line))
+        .filter((line) => !/^export\s+async\s+function\b/.test(line))
+      expect(valueExports).toEqual([])
+    })
+  }
 })
 
 describe("estados: claves canonicas y etiquetas en espanol", () => {

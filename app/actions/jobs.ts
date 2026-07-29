@@ -7,7 +7,10 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { JOB_STATUS_KEYS, type JobStatus, type PaymentStatus } from "@/lib/status"
 
-export const JOB_STATUSES = JOB_STATUS_KEYS as readonly JobStatus[]
+// Zod necesita una tupla no vacia. No se exporta nada que no sea una Server
+// Action: en un modulo "use server" los demas exports se convierten en
+// referencias de servidor y no son utilizables desde el cliente.
+const JOB_STATUS_ENUM = JOB_STATUS_KEYS as [JobStatus, ...JobStatus[]]
 
 /**
  * Deriva el estado de pago a partir de los importes.
@@ -38,7 +41,7 @@ const jobSchema = z.object({
   endTime: z.string().max(20).optional().default(""),
   amountEuros: z.string().optional().default(""),
   paidEuros: z.string().optional().default(""),
-  jobStatus: z.enum(JOB_STATUS_KEYS as [JobStatus, ...JobStatus[]]).optional().default("pending"),
+  jobStatus: z.enum(JOB_STATUS_ENUM).optional().default("pending"),
   notes: z.string().max(2000).optional().default(""),
 })
 
@@ -81,7 +84,7 @@ export async function saveJob(input: unknown) {
 export async function setJobStatus(id: number, status: JobStatus) {
   await requireAdmin()
   z.number().int().positive().parse(id)
-  z.enum(JOB_STATUS_KEYS as [JobStatus, ...JobStatus[]]).parse(status)
+  z.enum(JOB_STATUS_ENUM).parse(status)
   await sql`UPDATE jobs SET job_status = ${status}, updated_at = now() WHERE id = ${id}`
   revalidateAll()
   return { ok: true }

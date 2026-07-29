@@ -9,10 +9,12 @@ import {
   registerPayment,
   markFullyPaid,
   deleteJob,
-  JOB_STATUSES,
 } from "@/app/actions/jobs"
 import { formatEurFromMinor, formatDateEs } from "@/lib/format"
-import { jobStatusLabel, paymentStatusLabel } from "@/lib/status"
+// Las constantes y tipos vienen de lib/status.ts, no de las Server Actions:
+// en un modulo "use server" cualquier export se convierte en una referencia
+// de servidor, asi que en el cliente no llegaria el array.
+import { JOB_STATUS_KEYS, type JobStatus, jobStatusLabel, paymentStatusLabel } from "@/lib/status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
@@ -81,7 +84,7 @@ type Draft = {
   endTime: string
   amountEuros: string
   paidEuros: string
-  jobStatus: (typeof JOB_STATUSES)[number]
+  jobStatus: JobStatus
   notes: string
 }
 
@@ -184,7 +187,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
     })
   }
 
-  function changeStatus(j: Job, status: (typeof JOB_STATUSES)[number]) {
+  function changeStatus(j: Job, status: JobStatus) {
     startTransition(async () => {
       await setJobStatus(j.id, status)
       router.refresh()
@@ -300,12 +303,12 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Select value={(j.job_status || "").toLowerCase()} onValueChange={(v) => changeStatus(j, v as (typeof JOB_STATUSES)[number])}>
+                  <Select value={(j.job_status || "").toLowerCase()} onValueChange={(v) => changeStatus(j, v as JobStatus)}>
                     <SelectTrigger className="h-8 w-36 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {JOB_STATUSES.map((s) => (
+                      {JOB_STATUS_KEYS.map((s) => (
                         <SelectItem key={s} value={s}>
                           {jobStatusLabel(s)}
                         </SelectItem>
@@ -350,6 +353,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{draft?.id ? "Editar trabajo" : "Nuevo trabajo"}</DialogTitle>
+            <DialogDescription>
+              Datos del bolo: cliente, lugar, horario, importe y estado. Solo el cliente es obligatorio.
+            </DialogDescription>
           </DialogHeader>
           {draft && (
             <div className="space-y-3">
@@ -375,7 +381,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {JOB_STATUSES.map((s) => (
+                      {JOB_STATUS_KEYS.map((s) => (
                         <SelectItem key={s} value={s}>
                           {jobStatusLabel(s)}
                         </SelectItem>
@@ -438,6 +444,9 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Registrar cobro</DialogTitle>
+            <DialogDescription>
+              El importe se suma a lo ya cobrado y actualiza el estado de pago.
+            </DialogDescription>
           </DialogHeader>
           {payFor && (
             <div className="space-y-3">
