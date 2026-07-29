@@ -113,7 +113,10 @@ function toDraft(j?: Job): Draft {
 
 export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
   const router = useRouter()
-  const [jobs] = useState<Job[]>(initialJobs)
+  // Los trabajos vienen del Server Component y se refrescan con router.refresh().
+  // No se guardan en useState: eso congelaria la lista con los props iniciales
+  // y los cambios no se verian hasta recargar la pagina a mano.
+  const jobs = initialJobs
   const [filter, setFilter] = useState<string>("todos")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [open, setOpen] = useState(false)
@@ -124,22 +127,29 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
 
   // El resumen enlaza aqui con ?nuevo=1 o ?editar=<id> para abrir el
   // formulario directamente, ya que los trabajos no tienen pagina propia.
+  // El parametro se limpia nada mas consumirlo: si no, cada router.refresh()
+  // posterior volveria a abrir el dialogo.
   const searchParams = useSearchParams()
+  const nuevo = searchParams.get("nuevo")
+  const editar = searchParams.get("editar")
   useEffect(() => {
-    if (searchParams.get("nuevo")) {
+    if (!nuevo && !editar) return
+
+    if (nuevo) {
       setDraft(toDraft())
       setOpen(true)
-      return
-    }
-    const editId = Number(searchParams.get("editar"))
-    if (editId) {
-      const job = initialJobs.find((j) => j.id === editId)
+    } else {
+      const job = initialJobs.find((j) => j.id === Number(editar))
       if (job) {
         setDraft(toDraft(job))
         setOpen(true)
       }
     }
-  }, [searchParams, initialJobs])
+    // Al limpiar el parametro, la siguiente ejecucion del efecto sale por el
+    // return de arriba. Por eso puede depender de initialJobs sin que cada
+    // router.refresh() reabra el dialogo.
+    router.replace("/admin/trabajos", { scroll: false })
+  }, [nuevo, editar, router, initialJobs])
 
   const kpis = useMemo(() => {
     let collected = 0

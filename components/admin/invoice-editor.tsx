@@ -62,7 +62,8 @@ export function InvoiceEditor({
 
   const [issueDate, setIssueDate] = useState(invoice?.issue_date ?? prefill?.issueDate ?? today())
   const [dueDate, setDueDate] = useState(invoice?.due_date ?? "")
-  const [jobId] = useState<number | null>(invoice?.job_id ?? prefill?.jobId ?? null)
+  // El trabajo vinculado no se edita desde aqui: es una constante, no estado.
+  const jobId: number | null = invoice?.job_id ?? prefill?.jobId ?? null
   const currency = invoice?.currency ?? initialValues?.currency ?? "EUR"
 
   const [client, setClient] = useState({
