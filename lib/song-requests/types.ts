@@ -1,23 +1,10 @@
-export const REQUEST_STATUSES = ["pending_payment", "paid", "accepted", "played", "rejected", "refunded", "expired", "archived"] as const
-export const PAYMENT_STATUSES = ["not_required", "pending", "processing", "paid", "failed", "cancelled", "refunded", "partially_refunded", "expired"] as const
-export type RequestStatus = (typeof REQUEST_STATUSES)[number]
-export type SongPaymentStatus = (typeof PAYMENT_STATUSES)[number]
-export type ServiceStatus = "open" | "paused" | "closed"
+export const ROUND_STATUSES = ["open", "paused", "full", "last_round", "closed"] as const
+export const PASS_STATUSES = ["created", "pending_manual_payment", "payment_reported", "paid", "song_selection_open", "songs_submitted", "queued", "played", "payment_not_found", "expired", "cancelled", "archived"] as const
+export type RoundStatus = (typeof ROUND_STATUSES)[number]
+export type PassStatus = (typeof PASS_STATUSES)[number]
 
-export type SongRequestSettings = {
-  serviceStatus: ServiceStatus; freeRequests: boolean; priceCents: number; currency: string
-  eventName: string; eventId: string; publicMessage: string; peakMode: boolean; peakMessage: string
-  lastRound: boolean; dedicationsEnabled: boolean; activeRequestLimit: number | null
-  queueStatus: string; blockedGenres: string; paymentProvider: string
-}
-
-export type SongRequest = {
-  id: string; event_id: string; song_title: string; artist_name: string | null
-  requester_name: string | null; location_label: string | null; dedication: string | null
-  request_status: RequestStatus; payment_status: SongPaymentStatus; amount_cents: number
-  currency: string; payment_provider: string; payment_reference: string
-  checkout_session_id: string | null; payment_transaction_id: string | null
-  paid_at: string | null; accepted_at: string | null; played_at: string | null
-  rejected_at: string | null; refunded_at: string | null; expires_at: string | null
-  created_at: string; updated_at: string
-}
+export type SongRequestRound = { id:string; name:string; status:RoundStatus; capacity:number; reserved_slots:number; message:string; created_at:string; updated_at:string }
+export type SongRequestPass = { id:string; round_id:string; public_reference:string; bizum_name:string; whatsapp_number:string; amount_cents:number; reserved_song_count:number; payment_mode:"manual_bizum"; status:PassStatus; payment_reported_at:string|null; paid_at:string|null; confirmed_by:string|null; expires_at:string; created_at:string; updated_at:string }
+export type SongRequestItem = { id:string; song_request_id:string; position:number; title:string; artist:string|null; status:"queued"|"played"; played_at:string|null; spotify_track_id:string|null; spotify_track_url:string|null; artwork_url:string|null; version_label:string|null }
+export type PublicRound = { status:RoundStatus; capacity:number; occupied:number; available:number; percent:number; message:string }
+export type ManualBizumConfig = { enabled:boolean; contactName:string; phone:string; minAmountCents:number; tokenSecretConfigured:boolean; available:boolean }

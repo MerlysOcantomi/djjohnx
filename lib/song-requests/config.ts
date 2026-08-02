@@ -1,0 +1,3 @@
+import "server-only"
+import type { ManualBizumConfig } from "./types"
+export function getManualBizumConfig(env:NodeJS.ProcessEnv=process.env):ManualBizumConfig{const enabled=env.SONG_REQUEST_MANUAL_BIZUM_ENABLED==="true";const phone=(env.SONG_REQUEST_BIZUM_PHONE||"").trim();const contactName=(env.SONG_REQUEST_BIZUM_CONTACT_NAME||"").trim();const tokenSecretConfigured=Boolean(env.SONG_REQUEST_TOKEN_SECRET);const min=Number(env.SONG_REQUEST_MIN_AMOUNT_CENTS||100);return{enabled,phone,contactName,tokenSecretConfigured,minAmountCents:Number.isInteger(min)&&min>=100?min:100,available:enabled&&Boolean(phone)&&Boolean(contactName)&&tokenSecretConfigured}}

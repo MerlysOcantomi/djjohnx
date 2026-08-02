@@ -136,25 +136,24 @@ una de apoyo:
 
 ### Mi Canción
 
-La ruta pública `/mi-cancion` crea peticiones sin cuenta. La configuración y la
-cola privada viven en `/admin/solicitudes`, protegida por la sesión administrativa
-existente. La migración `0003_song_requests.sql` añade `song_request_settings`,
-`song_requests` y el registro idempotente de webhooks.
+`/mi-cancion` crea pases para pago manual mediante Bizum particular. El cliente
+indica nombre Bizum, WhatsApp, aportación desde 1 € y entre una y cinco canciones,
+pero no elige títulos hasta que el administrador comprueba el ingreso. La referencia
+corta identifica el concepto; una URL con token privado da acceso al pase.
 
-No hay una API universal de Bizum implementada. Antes de producción se debe
-contratar un TPV/Bizum para comercios con checkout y webhook firmado, implementar
-su adaptador `PaymentProvider` y configurar sus credenciales privadas. El
-proveedor `test` solo simula pagos cuando `NODE_ENV` no es `production` y
-`SONG_REQUEST_TEST_PAYMENT_ENABLED=true`; producción lo rechaza explícitamente.
-El regreso del navegador nunca confirma el pago: solo un evento firmado cambia
-el estado. Para desarrollo se requieren `DATABASE_URL`,
-`SONG_REQUEST_PAYMENT_PROVIDER=test`, `SONG_REQUEST_TEST_PAYMENT_ENABLED=true` y
-`SONG_REQUEST_WEBHOOK_SECRET` (un valor local aleatorio). En producción también
-son obligatorios el identificador comercial y la clave del proveedor contratado.
+La aplicación no integra Bizum comercial, webhooks bancarios ni APIs de WhatsApp o
+Spotify. El botón administrativo confirma manualmente un pago comunicado y abre
+`wa.me` con un mensaje preparado; DJ John decide si lo envía. Los tokens se guardan
+con hash para autenticación y cifrados para poder preparar ese aviso.
 
-El QR permanente contiene únicamente `${NEXT_PUBLIC_APP_URL}/mi-cancion`. La
-herramienta administrativa usa QuickChart para generar SVG y PNG; por tanto, su
-visualización y descarga requieren conexión a ese servicio externo.
+La ronda activa mide capacidad por canciones. La reserva se realiza de forma atómica
+al comunicar el pago, y se libera si no se encuentra, se cancela o caduca. La pantalla
+`/mi-cancion/live` solo publica ocupación, disponibilidad, estado y el QR estable.
+
+Producción requiere `SONG_REQUEST_MANUAL_BIZUM_ENABLED=true`, nombre y teléfono
+Bizum, `SONG_REQUEST_MIN_AMOUNT_CENTS` y un `SONG_REQUEST_TOKEN_SECRET` privado.
+Si faltan, el flujo queda cerrado. QuickChart genera el QR SVG/PNG; si no responde,
+solo falla el QR, no la cola. No existe generador QR local en esta versión.
 
 > **`neon_auth` no se usa ni se toca.** La aplicación no lee, escribe ni migra
 > nada en ese schema. La autenticación es propia (ver más abajo) y no usa Neon
