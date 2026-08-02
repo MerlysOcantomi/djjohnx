@@ -1,12 +1,7 @@
+/* eslint-disable @next/next/no-page-custom-font -- App Router root layout applies this stylesheet site-wide. */
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: '--font-inter',
-})
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://djjohnx.com'
 const TITLE = 'DJ JOHNX | Fusión Latina - DJ Cubano en Alicante'
@@ -60,7 +55,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark bg-background">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

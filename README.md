@@ -134,6 +134,27 @@ una de apoyo:
 `site_settings`, `site_sections`, `services`, `events`, `gallery_images`,
 `jobs`, `invoices`, `invoice_items` y `invoice_counters`.
 
+### Mi Canción
+
+`/mi-cancion` crea pases para pago manual mediante Bizum particular. El cliente
+indica nombre Bizum, WhatsApp, una aportación desde el mínimo configurado y entre una y cinco canciones,
+pero no elige títulos hasta que el administrador comprueba el ingreso. La referencia
+corta identifica el concepto; una URL con token privado da acceso al pase.
+
+La aplicación no integra Bizum comercial, webhooks bancarios ni APIs de WhatsApp o
+Spotify. El botón administrativo confirma manualmente un pago comunicado y abre
+`wa.me` con un mensaje preparado; DJ John decide si lo envía. Los tokens se guardan
+con hash para autenticación y cifrados para poder preparar ese aviso.
+
+La ronda activa mide capacidad por canciones. La reserva se realiza de forma atómica
+al comunicar el pago, y se libera si no se encuentra, se cancela o caduca. La pantalla
+`/mi-cancion/live` solo publica ocupación, disponibilidad, estado y el QR estable.
+
+Producción requiere `SONG_REQUEST_MANUAL_BIZUM_ENABLED=true`, nombre y teléfono
+Bizum, `SONG_REQUEST_MIN_AMOUNT_CENTS` y un `SONG_REQUEST_TOKEN_SECRET` privado.
+Si faltan, el flujo queda cerrado. QuickChart genera el QR SVG/PNG; si no responde,
+solo falla el QR, no la cola. No existe generador QR local en esta versión.
+
 > **`neon_auth` no se usa ni se toca.** La aplicación no lee, escribe ni migra
 > nada en ese schema. La autenticación es propia (ver más abajo) y no usa Neon
 > Auth ni Better Auth.
@@ -146,11 +167,12 @@ Están en `db/migrations` y se aplican **en orden**:
 |---|---|
 | `0001_init.sql` | Creación inicial de las tablas |
 | `0002_normalize_and_constraints.sql` | Normalización de estados, claves foráneas, índices, restricciones y numeración atómica |
+| `0003_song_requests.sql` | Configuración, cola e idempotencia de pagos de Mi Canción |
 
 Se ejecutan pegándolas en el editor SQL de Neon (Neon Console > SQL Editor) o con
-`psql "$DATABASE_URL" -f db/migrations/0002_normalize_and_constraints.sql`.
+`psql "$DATABASE_URL" -f db/migrations/0003_song_requests.sql` para la última.
 
-Ambas son **idempotentes**: se pueden ejecutar varias veces sin efectos
+Las migraciones son **idempotentes**: se pueden ejecutar varias veces sin efectos
 adicionales. Ninguna contiene `DROP`, `TRUNCATE` ni `DELETE`.
 
 **`0002` es obligatoria.** Sin ella conviven valores de estado en español

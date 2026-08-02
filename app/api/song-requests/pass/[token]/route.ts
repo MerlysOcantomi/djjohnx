@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server"
+import {getPassByToken,getItems} from "@/lib/song-requests/data"
+export async function GET(_:Request,{params}:{params:Promise<{token:string}>}){const{token}=await params;const pass=await getPassByToken(token);if(!pass)return NextResponse.json({error:"Pase no encontrado"},{status:404,headers:{"cache-control":"no-store"}});const items=await getItems(pass.id);return NextResponse.json({pass:{reference:pass.public_reference,bizumName:pass.bizum_name,amountCents:pass.amount_cents,songCount:pass.reserved_song_count,status:pass.status,reportedAt:pass.payment_reported_at,paidAt:pass.paid_at},items},{headers:{"cache-control":"private, no-store"}})}
