@@ -15,7 +15,7 @@ export function normalizeWhatsapp(value:string){const compact=value.replace(/[\s
 export function createPrivateToken(){return randomBytes(32).toString("base64url")}
 export function hashPrivateToken(token:string){return createHash("sha256").update(token).digest("hex")}
 export function isValidPrivateToken(token:string){return /^[A-Za-z0-9_-]{43}$/.test(token)}
-export function createPublicReference(){return `MC-${randomInt(100,1000)}`}
+export function createPublicReference(){return `MC-${randomInt(1000,10000)}`}
 export function buildWhatsappUrl(phone:string,message:string){return `https://wa.me/${normalizeWhatsapp(phone).slice(1)}?text=${encodeURIComponent(message)}`}
 export function buildConfirmationMessage(input:{name:string;reference:string;songCount:number;privateUrl:string}){return `Hola, ${input.name} 🎶\n\nDJ John ha confirmado el pago de tu pase ${input.reference}.\n\nYa puedes elegir tus ${input.songCount} canciones aquí:\n${input.privateUrl}`}
 export function escapeVCard(value:string){return value.replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;")}

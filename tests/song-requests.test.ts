@@ -11,7 +11,7 @@ describe("manual Bizum pass validation",()=>{
  it("normalizes WhatsApp",()=>expect(normalizeWhatsapp("600 123 456")).toBe("+34600123456"))
 })
 describe("private identity",()=>{
- it("creates unique short references",()=>{const values=new Set(Array.from({length:50},createPublicReference));expect(values.size).toBeGreaterThan(40);for(const value of values)expect(value).toMatch(/^MC-\d{3}$/)})
+ it("creates unique four-digit public references",()=>{const values=new Set(Array.from({length:50},createPublicReference));expect(values.size).toBeGreaterThan(40);for(const value of values)expect(value).toMatch(/^MC-\d{4}$/)})
  it("creates unique long private tokens and hashes",()=>{const a=createPrivateToken(),b=createPrivateToken();expect(a).not.toBe(b);expect(isValidPrivateToken(a)).toBe(true);expect(hashPrivateToken(a)).toMatch(/^[a-f0-9]{64}$/)})
  it("rejects invalid private tokens",()=>expect(isValidPrivateToken("MC-482")).toBe(false))
 })
@@ -20,8 +20,8 @@ describe("song selection",()=>{
  it("rejects empty or more than five items",()=>{expect(songItemsSchema.safeParse({items:[]}).success).toBe(false);expect(songItemsSchema.safeParse({items:Array.from({length:6},()=>({title:"x",artist:""}))}).success).toBe(false)})
 })
 describe("WhatsApp and contact",()=>{
- it("encodes the normalized number and message",()=>{const url=buildWhatsappUrl("600 123 456","Hola MC-482");expect(url).toContain("wa.me/34600123456");expect(url).toContain("Hola%20MC-482")})
- it("includes reference and private URL in confirmation",()=>{const message=buildConfirmationMessage({name:"Ana",reference:"MC-482",songCount:3,privateUrl:"https://djjohnx.com/mi-cancion/pase/private"});expect(message).toContain("MC-482");expect(message).toContain("/pase/private");expect(message).toContain("3 canciones")})
+ it("encodes the normalized number and message",()=>{const url=buildWhatsappUrl("600 123 456","Hola MC-4827");expect(url).toContain("wa.me/34600123456");expect(url).toContain("Hola%20MC-4827")})
+ it("includes reference and private URL in confirmation",()=>{const message=buildConfirmationMessage({name:"Ana",reference:"MC-4827",songCount:3,privateUrl:"https://djjohnx.com/mi-cancion/pase/private"});expect(message).toContain("MC-4827");expect(message).toContain("/pase/private");expect(message).toContain("3 canciones")})
  it("builds a valid escaped vCard",()=>{const card=createVCard("DJ John, Bizum","+34600123456");expect(card).toContain("BEGIN:VCARD\r\nVERSION:3.0");expect(card).toContain("DJ John\\, Bizum");expect(card).toContain("TEL;TYPE=CELL:+34600123456");expect(card).toContain("END:VCARD")})
 })
 describe("round and security contracts",()=>{
@@ -33,4 +33,12 @@ describe("round and security contracts",()=>{
  it("stores songs relationally and preserves future Spotify fields",()=>{expect(migration).toContain("CREATE TABLE IF NOT EXISTS song_request_items");expect(migration).toContain("spotify_track_id");expect(migration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE)\b/im)})
  it("has no public webhook and live contains no private fields",()=>{expect(()=>readFileSync(webhookPath)).toThrow();expect(live).not.toMatch(/whatsapp|bizum_name|amount_cents|public_reference|private_token/)})
  it("keeps the QR stable",()=>expect(live).toContain("`${base}/mi-cancion`"))
+ it("accepts normalized plus-prefixed phones and scopes references per round",()=>{expect(migration).toContain("whatsapp_number ~ '^[+][1-9][0-9]{7,14}$'");expect(migration).toContain("UNIQUE(round_id,public_reference)");expect(migration).toContain("^MC-[0-9]{4}$")})
+ it("expires unpaid and reported passes",()=>{expect(data).toContain("status IN ('pending_manual_payment','payment_reported')");expect(data).toContain("expires_at<=now()")})
+ it("preserves last round after becoming full",()=>{expect(migration).toContain("reopen_status");expect(data).toContain("THEN r.reopen_status")})
+ it("uses a shared atomic database rate limit",()=>{const rate=readFileSync("lib/song-requests/rate-limit.ts","utf8");expect(rate).toContain("song_request_rate_limits");expect(rate).toContain("ON CONFLICT (ip_hash) DO UPDATE");expect(rate).toContain("createHmac")})
+ it("prints the live poster and stops repeated reduced-motion animation",()=>{const css=readFileSync("app/globals.css","utf8");expect(live).toContain("print-poster");expect(css).toContain("animation-iteration-count: 1 !important")})
+ it("renders the configured minimum dynamically",()=>{const page=readFileSync("app/mi-cancion/page.tsx","utf8");expect(page).toContain("config.minAmountCents");expect(page).toContain("desde {minimum}")})
+ it("keeps paid passes accessible and terminal states away from payment instructions",()=>{const page=readFileSync("app/mi-cancion/pase/[token]/page.tsx","utf8"),view=readFileSync("components/song-requests/pass-view.tsx","utf8");expect(page).not.toContain("!config.available)notFound");for(const state of ["expired","payment_not_found","cancelled","archived"])expect(view).toContain(state);expect(view.indexOf("terminal[pass.status]")).toBeLessThan(view.indexOf("Contacto Bizum"));expect(view).toContain("Este pase no admite nuevos pagos")})
+ it("decrypts before confirmation and supports WhatsApp resend",()=>{const actions=readFileSync("app/actions/song-requests.ts","utf8"),admin=readFileSync("components/admin/song-requests-manager.tsx","utf8");expect(actions.indexOf("prepareWhatsApp(id")).toBeLessThan(actions.indexOf("confirmManualPayment(id"));expect(actions).toContain("resendManualBizumWhatsAppAction");expect(admin).toContain("Avisar nuevamente por WhatsApp");expect(admin).toContain("window.open('about:blank'")})
 })

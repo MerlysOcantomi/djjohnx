@@ -137,7 +137,7 @@ una de apoyo:
 ### Mi Canción
 
 `/mi-cancion` crea pases para pago manual mediante Bizum particular. El cliente
-indica nombre Bizum, WhatsApp, aportación desde 1 € y entre una y cinco canciones,
+indica nombre Bizum, WhatsApp, una aportación desde el mínimo configurado y entre una y cinco canciones,
 pero no elige títulos hasta que el administrador comprueba el ingreso. La referencia
 corta identifica el concepto; una URL con token privado da acceso al pase.
 
