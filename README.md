@@ -134,6 +134,28 @@ una de apoyo:
 `site_settings`, `site_sections`, `services`, `events`, `gallery_images`,
 `jobs`, `invoices`, `invoice_items` y `invoice_counters`.
 
+### Mi Canción
+
+La ruta pública `/mi-cancion` crea peticiones sin cuenta. La configuración y la
+cola privada viven en `/admin/solicitudes`, protegida por la sesión administrativa
+existente. La migración `0003_song_requests.sql` añade `song_request_settings`,
+`song_requests` y el registro idempotente de webhooks.
+
+No hay una API universal de Bizum implementada. Antes de producción se debe
+contratar un TPV/Bizum para comercios con checkout y webhook firmado, implementar
+su adaptador `PaymentProvider` y configurar sus credenciales privadas. El
+proveedor `test` solo simula pagos cuando `NODE_ENV` no es `production` y
+`SONG_REQUEST_TEST_PAYMENT_ENABLED=true`; producción lo rechaza explícitamente.
+El regreso del navegador nunca confirma el pago: solo un evento firmado cambia
+el estado. Para desarrollo se requieren `DATABASE_URL`,
+`SONG_REQUEST_PAYMENT_PROVIDER=test`, `SONG_REQUEST_TEST_PAYMENT_ENABLED=true` y
+`SONG_REQUEST_WEBHOOK_SECRET` (un valor local aleatorio). En producción también
+son obligatorios el identificador comercial y la clave del proveedor contratado.
+
+El QR permanente contiene únicamente `${NEXT_PUBLIC_APP_URL}/mi-cancion`. La
+herramienta administrativa usa QuickChart para generar SVG y PNG; por tanto, su
+visualización y descarga requieren conexión a ese servicio externo.
+
 > **`neon_auth` no se usa ni se toca.** La aplicación no lee, escribe ni migra
 > nada en ese schema. La autenticación es propia (ver más abajo) y no usa Neon
 > Auth ni Better Auth.
@@ -146,11 +168,12 @@ Están en `db/migrations` y se aplican **en orden**:
 |---|---|
 | `0001_init.sql` | Creación inicial de las tablas |
 | `0002_normalize_and_constraints.sql` | Normalización de estados, claves foráneas, índices, restricciones y numeración atómica |
+| `0003_song_requests.sql` | Configuración, cola e idempotencia de pagos de Mi Canción |
 
 Se ejecutan pegándolas en el editor SQL de Neon (Neon Console > SQL Editor) o con
-`psql "$DATABASE_URL" -f db/migrations/0002_normalize_and_constraints.sql`.
+`psql "$DATABASE_URL" -f db/migrations/0003_song_requests.sql` para la última.
 
-Ambas son **idempotentes**: se pueden ejecutar varias veces sin efectos
+Las migraciones son **idempotentes**: se pueden ejecutar varias veces sin efectos
 adicionales. Ninguna contiene `DROP`, `TRUNCATE` ni `DELETE`.
 
 **`0002` es obligatoria.** Sin ella conviven valores de estado en español

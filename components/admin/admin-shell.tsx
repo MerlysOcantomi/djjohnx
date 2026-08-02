@@ -15,6 +15,7 @@ import {
   Briefcase,
   FileText,
   Settings,
+  Music2,
   LogOut,
   Menu,
   X,
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/admin/servicios", label: "Servicios", icon: Sparkles },
   { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
   { href: "/admin/trabajos", label: "Trabajos", icon: Briefcase },
+  { href: "/admin/solicitudes", label: "Solicitudes", icon: Music2 },
   { href: "/admin/facturas", label: "Facturas", icon: FileText },
   { href: "/admin/configuracion", label: "Configuracion", icon: Settings },
 ]

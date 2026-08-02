@@ -141,6 +141,16 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .print-poster, .print-poster * { visibility: visible; }
+  .print-poster { position: fixed; inset: 0; width: 100%; display: grid; place-content: center; border: 0 !important; }
+}
+
 @layer utilities {
   .text-gradient-gold {
     background: linear-gradient(135deg, oklch(0.98 0 0) 0%, oklch(0.85 0.08 220) 50%, oklch(0.95 0.03 220) 100%);
