@@ -124,6 +124,11 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
   const [payAmount, setPayAmount] = useState("")
   const [deleting, setDeleting] = useState<Job | null>(null)
   const [isPending, startTransition] = useTransition()
+  // Transicion propia del formulario. Si compartiera isPending con las
+  // acciones de la lista (cambiar estado, cobrar, borrar), cualquiera de
+  // ellas en vuelo dejaria el boton Guardar deshabilitado y pareceria que
+  // el formulario no responde.
+  const [saving, startSaving] = useTransition()
 
   // El resumen enlaza aqui con ?nuevo=1 o ?editar=<id> para abrir el
   // formulario directamente, ya que los trabajos no tienen pagina propia.
@@ -179,20 +184,34 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
     setOpen(true)
   }
 
+  /**
+   * Cierra el dialogo y descarta el borrador. Se limpia al terminar la
+   * animacion de salida para que no se vea el formulario vaciarse, y para
+   * que al abrir otro trabajo nunca aparezcan los datos del anterior.
+   */
+  function handleOpenChange(next: boolean) {
+    setOpen(next)
+    if (!next) window.setTimeout(() => setDraft(null), 200)
+  }
+
   function save() {
     if (!draft) return
     if (!draft.clientName.trim()) {
       toast.error("El cliente es obligatorio")
       return
     }
-    startTransition(async () => {
+    startSaving(async () => {
       try {
         await saveJob(draft)
-        toast.success("Trabajo guardado")
-        setOpen(false)
+        toast.success(draft.id ? "Trabajo actualizado" : "Trabajo creado")
+        handleOpenChange(false)
         router.refresh()
-      } catch {
-        toast.error("No se pudo guardar")
+      } catch (e) {
+        // El dialogo se queda abierto a proposito: los datos escritos no se
+        // pierden y se puede corregir y reintentar.
+        console.error("[trabajos] Error al guardar:", e)
+        const message = e instanceof Error && e.message ? e.message : ""
+        toast.error(message || "No se pudo guardar el trabajo. Revisa los datos e intentalo de nuevo.")
       }
     })
   }
@@ -359,17 +378,22 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
       )}
 
       {/* Crear / editar */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        {/*
+          El cuerpo desplaza y el pie queda fijo abajo: en movil, con el
+          formulario completo, Guardar quedaba fuera de la pantalla y habia
+          que desplazarse hasta el final para encontrarlo.
+        */}
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b border-border px-6 py-4 text-left">
             <DialogTitle>{draft?.id ? "Editar trabajo" : "Nuevo trabajo"}</DialogTitle>
             <DialogDescription>
               Datos del bolo: cliente, lugar, horario, importe y estado. Solo el cliente es obligatorio.
             </DialogDescription>
           </DialogHeader>
           {draft && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Cliente</Label>
                   <Input value={draft.clientName} onChange={(e) => setDraft({ ...draft, clientName: e.target.value })} />
@@ -379,7 +403,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                   <Input value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Fecha</Label>
                   <Input type="date" value={draft.jobDate} onChange={(e) => setDraft({ ...draft, jobDate: e.target.value })} />
@@ -400,7 +424,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Hora inicio</Label>
                   <Input value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} placeholder="23:00" />
@@ -411,10 +435,32 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label>Concepto</Label>
-                <Input value={draft.concept} onChange={(e) => setDraft({ ...draft, concept: e.target.value })} placeholder="Sesion DJ boda" />
+                <Label htmlFor="job-concept">Concepto</Label>
+                <Input
+                  id="job-concept"
+                  value={draft.concept}
+                  onChange={(e) => setDraft({ ...draft, concept: e.target.value })}
+                  placeholder="Sesion DJ boda"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Titulo breve del trabajo. Es el que se copia como concepto de la factura.
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="space-y-1">
+                <Label htmlFor="job-description">Descripcion</Label>
+                <Textarea
+                  id="job-description"
+                  value={draft.description}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  rows={5}
+                  placeholder="Detalles del evento, necesidades del cliente, equipo, musica o informacion importante."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Informacion detallada del trabajo. Tambien se traslada a la factura al crearla desde aqui.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Lugar</Label>
                   <Input value={draft.venue} onChange={(e) => setDraft({ ...draft, venue: e.target.value })} />
@@ -424,7 +470,7 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                   <Input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Importe (€)</Label>
                   <Input value={draft.amountEuros} onChange={(e) => setDraft({ ...draft, amountEuros: e.target.value })} placeholder="500,00" />
@@ -435,14 +481,26 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label>Notas</Label>
-                <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} rows={2} />
+                <Label htmlFor="job-notes">Notas</Label>
+                <Textarea
+                  id="job-notes"
+                  value={draft.notes}
+                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Recordatorios para ti: acceso, aparcamiento, contacto en sala..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Uso interno. No aparece en la factura ni en la web publica.
+                </p>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={save} disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <DialogFooter className="gap-2 border-t border-border px-6 py-4 sm:gap-0">
+            <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Guardar
             </Button>
           </DialogFooter>
