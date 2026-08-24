@@ -85,3 +85,61 @@ describe("la lista de trabajos se refresca sola", () => {
     expect(source).toContain('router.replace("/admin/trabajos"')
   })
 })
+
+describe("el formulario de trabajos permite editar todos los campos", () => {
+  const source = readFileSync(join(ADMIN_DIR, "jobs-manager.tsx"), "utf8")
+
+  // description existia en el tipo Draft, en toDraft y en la Server Action,
+  // pero no habia ningun control en el formulario: el dato viajaba de ida y
+  // vuelta intacto y no habia forma de escribirlo desde el panel.
+  const FIELDS = [
+    "clientName",
+    "company",
+    "jobDate",
+    "jobStatus",
+    "startTime",
+    "endTime",
+    "concept",
+    "description",
+    "venue",
+    "address",
+    "amountEuros",
+    "paidEuros",
+    "notes",
+  ]
+
+  for (const field of FIELDS) {
+    it(`${field} tiene un control conectado al borrador`, () => {
+      // Un control editable siempre escribe en el borrador con setDraft.
+      const written = new RegExp(`setDraft\\(\\{\\s*\\.\\.\\.draft,\\s*${field}:`).test(source)
+      const isSelect = new RegExp(`${field}: v as`).test(source)
+      expect(written || isSelect).toBe(true)
+    })
+  }
+
+  it("cada campo del borrador es editable: ninguno se queda sin control", () => {
+    const draftType = source.slice(source.indexOf("type Draft = {"), source.indexOf("function minorToEurStr"))
+    const declared = [...draftType.matchAll(/^\s{2}(\w+)\??:/gm)].map((m) => m[1]).filter((f) => f !== "id")
+    expect(declared.sort()).toEqual([...FIELDS].sort())
+  })
+
+  it("la descripcion usa un area de texto amplia, no un input de una linea", () => {
+    const block = source.slice(source.indexOf('id="job-description"'))
+    expect(block.slice(0, 400)).toMatch(/rows=\{[4-6]\}/)
+  })
+
+  it("guardar usa una transicion propia, no la compartida con la lista", () => {
+    const start = source.indexOf("function save()")
+    const body = source.slice(start, source.indexOf("\n  function ", start + 1))
+    expect(body).toContain("startSaving(")
+    expect(body).not.toContain("startTransition(")
+  })
+
+  it("si guardar falla, el dialogo no se cierra y el error se registra", () => {
+    const start = source.indexOf("function save()")
+    const body = source.slice(start, source.indexOf("\n  function ", start + 1))
+    const failure = body.slice(body.indexOf("catch"))
+    expect(failure).toContain("console.error")
+    expect(failure).not.toContain("handleOpenChange(false)")
+  })
+})
