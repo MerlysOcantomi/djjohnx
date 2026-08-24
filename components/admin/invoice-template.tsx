@@ -45,6 +45,12 @@ export function InvoiceTemplate({
     phone: storedInvoice.issuer_phone || profile.phone,
     email: storedInvoice.issuer_email || profile.email,
   }
+  const isDraft = invoice.status === "draft"
+  const paymentHolder = isDraft ? invoice.payment_holder || billing.bankHolder : invoice.payment_holder
+  const paymentIban = isDraft ? invoice.payment_iban || billing.iban : invoice.payment_iban
+  const paymentBic = isDraft ? invoice.payment_bic || billing.bic : invoice.payment_bic
+  const paymentTerms = isDraft ? invoice.payment_terms || billing.paymentTerms : invoice.payment_terms
+  const clientNotes = isDraft ? invoice.client_notes || billing.notes : invoice.client_notes
   const currency = invoice.currency || billing.currency || "EUR"
   const logoUrl = logo.url
   const logoPosition = logo.position || "left"
@@ -180,29 +186,25 @@ export function InvoiceTemplate({
         {/* Pago y notas */}
         <footer className="mt-8 grid grid-cols-2 gap-6 text-xs">
           <div>
-            {(invoice.payment_method || invoice.payment_iban || billing.iban) && (
+            {(invoice.payment_method || paymentIban) && (
               <>
                 <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">Forma de pago</p>
                 {invoice.payment_method && <p>{invoice.payment_method}</p>}
-                {(invoice.payment_holder || billing.bankHolder) && (
-                  <p>Titular: {invoice.payment_holder || billing.bankHolder}</p>
-                )}
-                {(invoice.payment_iban || billing.iban) && <p>IBAN: {invoice.payment_iban || billing.iban}</p>}
-                {(invoice.payment_bic || billing.bic) && <p>BIC: {invoice.payment_bic || billing.bic}</p>}
+                {paymentHolder && <p>Titular: {paymentHolder}</p>}
+                {paymentIban && <p>IBAN: {paymentIban}</p>}
+                {paymentBic && <p>BIC: {paymentBic}</p>}
                 {invoice.payment_reference && <p>Ref: {invoice.payment_reference}</p>}
               </>
             )}
           </div>
           <div>
-            {(invoice.payment_terms || billing.paymentTerms) && (
+            {paymentTerms && (
               <>
                 <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">Condiciones</p>
-                <p>{invoice.payment_terms || billing.paymentTerms}</p>
+                <p>{paymentTerms}</p>
               </>
             )}
-            {(invoice.client_notes || billing.notes) && (
-              <p className="mt-2 text-neutral-600">{invoice.client_notes || billing.notes}</p>
-            )}
+            {clientNotes && <p className="mt-2 text-neutral-600">{clientNotes}</p>}
           </div>
         </footer>
       </div>
