@@ -13,9 +13,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   if (!(await isAuthenticated())) redirect("/admin/login")
 
   return (
-    <>
+    <div lang="es" spellCheck>
       <AdminShell>{children}</AdminShell>
       <Toaster position="top-center" richColors />
-    </>
+    </div>
   )
 }
