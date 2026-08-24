@@ -34,7 +34,7 @@ export async function correctSpanishText(input: { text: string }) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openai/gpt-5.4",
+      model: "openai/gpt-5.4-mini",
       stream: false,
       messages: [
         {
