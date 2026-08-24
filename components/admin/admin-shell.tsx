@@ -14,6 +14,7 @@ import {
   CalendarDays,
   Briefcase,
   FileText,
+  Music2,
   Settings,
   LogOut,
   Menu,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/admin/fotos", label: "Fotos", icon: ImageIcon },
   { href: "/admin/servicios", label: "Servicios", icon: Sparkles },
   { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
+  { href: "/admin/peticiones", label: "Peticiones", icon: Music2 },
   { href: "/admin/trabajos", label: "Trabajos", icon: Briefcase },
   { href: "/admin/facturas", label: "Facturas", icon: FileText },
   { href: "/admin/configuracion", label: "Configuracion", icon: Settings },
@@ -67,7 +69,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Cerrar el menu con Escape y evitar que el fondo se desplace mientras esta abierto.
   useEffect(() => {
     if (!mobileOpen) return
     function onKeyDown(e: KeyboardEvent) {
@@ -84,7 +85,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar escritorio */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/40 bg-card/40 p-4 lg:flex">
         <Link href="/admin" className="mb-8 block px-3 pt-2">
           <span className="text-2xl font-black tracking-wider text-gradient-gold">DJ JOHNX</span>
@@ -103,7 +103,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </form>
       </aside>
 
-      {/* Cabecera movil */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/40 bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
         <Link href="/admin" className="text-xl font-black tracking-wider text-gradient-gold">
           DJ JOHNX
@@ -118,9 +117,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </Button>
       </header>
 
-      {/* Menu movil deslizante */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú de navegación">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu de navegacion">
           <div
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
@@ -152,7 +150,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Contenido */}
       <div className="lg:pl-64">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">{children}</div>
       </div>
