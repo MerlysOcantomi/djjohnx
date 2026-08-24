@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { Invoice } from "@/lib/data"
 import { formatMoneyMinor } from "@/lib/format"
 import { invoiceStatusLabel } from "@/lib/status"
@@ -44,6 +45,7 @@ const statusVariant: Record<string, string> = {
 }
 
 export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
+  const router = useRouter()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<string>("all")
   const [toDelete, setToDelete] = useState<Invoice | null>(null)
@@ -66,6 +68,7 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
       try {
         await fn()
         toast.success(okMsg)
+        router.refresh()
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "No se pudo completar la accion")
       }
