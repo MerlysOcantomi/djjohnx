@@ -9,6 +9,19 @@ import { formatMoneyMinor, formatQty, formatDateEs } from "@/lib/format"
 
 const LOGO_SIZES: Record<string, number> = { small: 56, medium: 84, large: 120 }
 
+type InvoiceIssuerSnapshot = {
+  issuer_artist_name?: string | null
+  issuer_legal_name?: string | null
+  issuer_tax_id?: string | null
+  issuer_address?: string | null
+  issuer_postal_code?: string | null
+  issuer_city?: string | null
+  issuer_province?: string | null
+  issuer_country?: string | null
+  issuer_phone?: string | null
+  issuer_email?: string | null
+}
+
 export function InvoiceTemplate({
   invoice,
   items,
@@ -19,6 +32,25 @@ export function InvoiceTemplate({
   settings: SiteSettings
 }) {
   const { profile, billing, logo } = settings
+  const storedInvoice = invoice as Invoice & InvoiceIssuerSnapshot
+  const issuer = {
+    artistName: storedInvoice.issuer_artist_name || profile.artistName,
+    legalName: storedInvoice.issuer_legal_name || profile.legalName,
+    taxId: storedInvoice.issuer_tax_id || profile.taxId,
+    address: storedInvoice.issuer_address || profile.address,
+    postalCode: storedInvoice.issuer_postal_code || profile.postalCode,
+    city: storedInvoice.issuer_city || profile.city,
+    province: storedInvoice.issuer_province || profile.province,
+    country: storedInvoice.issuer_country || profile.country,
+    phone: storedInvoice.issuer_phone || profile.phone,
+    email: storedInvoice.issuer_email || profile.email,
+  }
+  const isDraft = invoice.status === "draft"
+  const paymentHolder = isDraft ? invoice.payment_holder || billing.bankHolder : invoice.payment_holder
+  const paymentIban = isDraft ? invoice.payment_iban || billing.iban : invoice.payment_iban
+  const paymentBic = isDraft ? invoice.payment_bic || billing.bic : invoice.payment_bic
+  const paymentTerms = isDraft ? invoice.payment_terms || billing.paymentTerms : invoice.payment_terms
+  const clientNotes = isDraft ? invoice.client_notes || billing.notes : invoice.client_notes
   const currency = invoice.currency || billing.currency || "EUR"
   const logoUrl = logo.url
   const logoPosition = logo.position || "left"
@@ -36,7 +68,6 @@ export function InvoiceTemplate({
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
           style={{ opacity: 0.05 }}
         >
-          { }
           <img src={logoUrl || "/placeholder.svg"} alt="" style={{ width: "60%", maxWidth: 420 }} />
         </div>
       )}
@@ -46,14 +77,13 @@ export function InvoiceTemplate({
         <header className={`flex justify-between gap-6 ${headerAlign}`}>
           <div>
             {logoUrl ? (
-               
               <img
                 src={logoUrl || "/placeholder.svg"}
-                alt={profile.artistName || "Logo"}
+                alt={issuer.artistName || "Logo"}
                 style={{ height: logoHeight, width: "auto", objectFit: "contain" }}
               />
             ) : (
-              <div className="text-2xl font-black tracking-tight">{profile.artistName || "DJ JOHNX"}</div>
+              <div className="text-2xl font-black tracking-tight">{issuer.artistName || "DJ JOHNX"}</div>
             )}
           </div>
           <div className={logoPosition === "right" ? "text-left" : "text-right"}>
@@ -72,18 +102,18 @@ export function InvoiceTemplate({
         <section className="mt-8 grid grid-cols-2 gap-6 text-xs">
           <div>
             <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">De</p>
-            <p className="font-semibold">{profile.legalName || profile.artistName}</p>
-            {profile.taxId && <p>NIF/CIF: {profile.taxId}</p>}
-            {profile.address && <p>{profile.address}</p>}
-            {(profile.postalCode || profile.city) && (
+            <p className="font-semibold">{issuer.legalName || issuer.artistName}</p>
+            {issuer.taxId && <p>NIF/CIF: {issuer.taxId}</p>}
+            {issuer.address && <p>{issuer.address}</p>}
+            {(issuer.postalCode || issuer.city) && (
               <p>
-                {profile.postalCode} {profile.city}
-                {profile.province ? `, ${profile.province}` : ""}
+                {issuer.postalCode} {issuer.city}
+                {issuer.province ? `, ${issuer.province}` : ""}
               </p>
             )}
-            {profile.country && <p>{profile.country}</p>}
-            {profile.phone && <p>Tel: {profile.phone}</p>}
-            {profile.email && <p>{profile.email}</p>}
+            {issuer.country && <p>{issuer.country}</p>}
+            {issuer.phone && <p>Tel: {issuer.phone}</p>}
+            {issuer.email && <p>{issuer.email}</p>}
           </div>
           <div>
             <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">Cliente</p>
@@ -156,29 +186,25 @@ export function InvoiceTemplate({
         {/* Pago y notas */}
         <footer className="mt-8 grid grid-cols-2 gap-6 text-xs">
           <div>
-            {(invoice.payment_method || invoice.payment_iban || billing.iban) && (
+            {(invoice.payment_method || paymentIban) && (
               <>
                 <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">Forma de pago</p>
                 {invoice.payment_method && <p>{invoice.payment_method}</p>}
-                {(invoice.payment_holder || billing.bankHolder) && (
-                  <p>Titular: {invoice.payment_holder || billing.bankHolder}</p>
-                )}
-                {(invoice.payment_iban || billing.iban) && <p>IBAN: {invoice.payment_iban || billing.iban}</p>}
-                {(invoice.payment_bic || billing.bic) && <p>BIC: {invoice.payment_bic || billing.bic}</p>}
+                {paymentHolder && <p>Titular: {paymentHolder}</p>}
+                {paymentIban && <p>IBAN: {paymentIban}</p>}
+                {paymentBic && <p>BIC: {paymentBic}</p>}
                 {invoice.payment_reference && <p>Ref: {invoice.payment_reference}</p>}
               </>
             )}
           </div>
           <div>
-            {(invoice.payment_terms || billing.paymentTerms) && (
+            {paymentTerms && (
               <>
                 <p className="mb-1 font-semibold uppercase tracking-wide text-neutral-500">Condiciones</p>
-                <p>{invoice.payment_terms || billing.paymentTerms}</p>
+                <p>{paymentTerms}</p>
               </>
             )}
-            {(invoice.client_notes || billing.notes) && (
-              <p className="mt-2 text-neutral-600">{invoice.client_notes || billing.notes}</p>
-            )}
+            {clientNotes && <p className="mt-2 text-neutral-600">{clientNotes}</p>}
           </div>
         </footer>
       </div>
