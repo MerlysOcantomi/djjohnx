@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Check, Clock3, Disc3, Loader2, X } from "lucide-react"
+import { Check, Clock3, Disc3, ExternalLink, Loader2, Music2, X } from "lucide-react"
 import { toast } from "sonner"
 import { updateFreeSongRequestStatus } from "@/app/actions/song-requests"
 import type { FreeSongRequest, FreeSongRequestStatus } from "@/lib/song-requests"
@@ -31,9 +31,23 @@ export function SongRequestsManager({ initialRequests }: { initialRequests: Free
   function setStatus(id: number, status: FreeSongRequestStatus) {
     startTransition(async () => {
       try {
-        await updateFreeSongRequestStatus({ id, status })
-        setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
-        toast.success(`Peticion marcada como ${labels[status].toLowerCase()}`)
+        const result = await updateFreeSongRequestStatus({ id, status })
+        setRequests((prev) => prev.map((r) => (
+          r.id === id
+            ? { ...r, status, spotify_added_at: result.spotify === "added" ? new Date().toISOString() : r.spotify_added_at }
+            : r
+        )))
+
+        if (status === "accepted") {
+          if (result.spotify === "added") toast.success("Aceptada y añadida a la playlist de Spotify")
+          else if (result.spotify === "already_added") toast.success("Peticion aceptada; ya estaba en Spotify")
+          else if (result.spotify === "not_connected") toast.warning("Aceptada. Conecta Spotify para añadirla a la playlist")
+          else if (result.spotify === "not_selected") toast.warning("Aceptada. Esta peticion no tiene una pista de Spotify seleccionada")
+          else if (result.spotify === "failed") toast.error("Aceptada, pero Spotify no pudo añadir la cancion")
+          else toast.success("Peticion aceptada")
+        } else {
+          toast.success(`Peticion marcada como ${labels[status].toLowerCase()}`)
+        }
       } catch {
         toast.error("No se pudo actualizar la peticion")
       }
@@ -59,19 +73,34 @@ export function SongRequestsManager({ initialRequests }: { initialRequests: Free
       {requests.map((request) => (
         <article key={request.id} className="rounded-xl border border-border bg-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-foreground">{request.song_title}</h2>
-                <Badge variant="secondary">{labels[request.status]}</Badge>
+            <div className="flex min-w-0 gap-3">
+              {request.spotify_artwork_url ? (
+                <img src={request.spotify_artwork_url} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <Music2 className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-semibold text-foreground">{request.song_title}</h2>
+                  <Badge variant="secondary">{labels[request.status]}</Badge>
+                  {request.spotify_added_at && <Badge variant="outline">En Spotify</Badge>}
+                </div>
+                {request.artist_name && <p className="text-sm text-muted-foreground">{request.artist_name}</p>}
+                {request.spotify_track_url && (
+                  <a href={request.spotify_track_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-500 hover:underline">
+                    Abrir en Spotify <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                <p className="mt-2 text-sm text-foreground/80">
+                  Pedido por <span className="font-medium text-foreground">{request.requester_name}</span>
+                </p>
+                {request.note && <p className="mt-1 text-sm text-muted-foreground">“{request.note}”</p>}
+                <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock3 className="h-3.5 w-3.5" /> {formatTime(request.created_at)}
+                </p>
               </div>
-              {request.artist_name && <p className="text-sm text-muted-foreground">{request.artist_name}</p>}
-              <p className="mt-2 text-sm text-foreground/80">
-                Pedido por <span className="font-medium text-foreground">{request.requester_name}</span>
-              </p>
-              {request.note && <p className="mt-1 text-sm text-muted-foreground">“{request.note}”</p>}
-              <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5" /> {formatTime(request.created_at)}
-              </p>
             </div>
 
             <div className="flex flex-wrap gap-2 sm:max-w-72 sm:justify-end">
