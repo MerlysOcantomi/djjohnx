@@ -38,23 +38,23 @@ export default async function DashboardPage() {
 
       {/* Acceso principal a peticiones */}
       <Link href="/admin/peticiones" className="group block">
-        <Card className="overflow-hidden border-primary/40 bg-primary p-0 text-primary-foreground shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
-          <div className="flex items-center justify-between gap-4 p-5 sm:p-6">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-foreground/15 sm:h-16 sm:w-16">
-                <Music2 className="h-7 w-7 sm:h-8 sm:w-8" />
+        <Card className="overflow-hidden border-violet-500/50 bg-zinc-950 p-0 text-white shadow-[0_0_28px_rgba(124,58,237,0.18)] transition-all hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-[0_0_36px_rgba(124,58,237,0.3)]">
+          <div className="flex items-center justify-between gap-3 p-4 sm:p-5">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-violet-400/40 bg-violet-500/15 sm:h-14 sm:w-14">
+                <Music2 className="h-6 w-6 text-violet-300 sm:h-7 sm:w-7" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground/75">Acceso rapido</p>
-                <h2 className="mt-1 text-xl font-black sm:text-2xl">Mis peticiones</h2>
-                <p className="mt-1 text-sm text-primary-foreground/80">
+                <h2 className="text-2xl font-black leading-none tracking-tight sm:text-3xl">Mis peticiones</h2>
+                <p className="mt-2 text-base font-semibold text-violet-200 sm:text-lg">
                   {pendingRequests > 0
-                    ? `${pendingRequests} ${pendingRequests === 1 ? "cancion pendiente" : "canciones pendientes"} por revisar`
-                    : "Ver peticiones, aceptar canciones y gestionar Spotify"}
+                    ? `${pendingRequests} ${pendingRequests === 1 ? "pendiente" : "pendientes"}`
+                    : "Sin pendientes"}
                 </p>
+                <p className="mt-0.5 text-sm text-zinc-400 sm:text-base">Canciones, aceptaciones y Spotify</p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-2 text-sm font-bold sm:px-4">
+            <div className="flex shrink-0 items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-sm font-bold text-violet-100 sm:px-4 sm:text-base">
               <span className="hidden sm:inline">Abrir</span>
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </div>
