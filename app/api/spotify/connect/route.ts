@@ -3,15 +3,12 @@ import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/auth"
 import { spotifyAuthorizeUrl } from "@/lib/spotify"
 
-function redirectUri() {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.djjohnx.com"
-  return new URL("/api/spotify/callback", base).toString()
-}
+const SPOTIFY_REDIRECT_URI = "https://www.djjohnx.com/api/spotify/callback"
 
 export async function GET() {
   await requireAdmin()
   const state = randomBytes(24).toString("base64url")
-  const response = NextResponse.redirect(spotifyAuthorizeUrl(state, redirectUri()))
+  const response = NextResponse.redirect(spotifyAuthorizeUrl(state, SPOTIFY_REDIRECT_URI))
   response.cookies.set("spotify_oauth_state", state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
