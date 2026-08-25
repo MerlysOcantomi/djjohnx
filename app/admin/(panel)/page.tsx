@@ -1,10 +1,11 @@
 import Link from "next/link"
 import { getDashboardStats, getUpcomingJobs, getGalleryImages } from "@/lib/data"
+import { getFreeSongRequests } from "@/lib/song-requests"
 import { formatEurFromMinor, formatDateEs } from "@/lib/format"
 import { jobStatusLabel } from "@/lib/status"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Briefcase, FileText, ImageIcon, Globe, CalendarClock } from "lucide-react"
+import { ArrowRight, Briefcase, CalendarClock, FileText, Globe, ImageIcon, Music2 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -19,11 +20,14 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export default async function DashboardPage() {
-  const [stats, upcoming, latestPhotos] = await Promise.all([
+  const [stats, upcoming, latestPhotos, songRequests] = await Promise.all([
     getDashboardStats(),
     getUpcomingJobs(5),
     getGalleryImages(),
+    getFreeSongRequests(),
   ])
+
+  const pendingRequests = songRequests.filter((request) => request.status === "pending").length
 
   return (
     <div className="space-y-8">
@@ -31,6 +35,32 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-black text-foreground">Resumen</h1>
         <p className="text-sm text-foreground/60">Panel de control de DJ JOHNX</p>
       </div>
+
+      {/* Acceso principal a peticiones */}
+      <Link href="/admin/peticiones" className="group block">
+        <Card className="overflow-hidden border-primary/40 bg-primary p-0 text-primary-foreground shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
+          <div className="flex items-center justify-between gap-4 p-5 sm:p-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-foreground/15 sm:h-16 sm:w-16">
+                <Music2 className="h-7 w-7 sm:h-8 sm:w-8" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground/75">Acceso rapido</p>
+                <h2 className="mt-1 text-xl font-black sm:text-2xl">Mis peticiones</h2>
+                <p className="mt-1 text-sm text-primary-foreground/80">
+                  {pendingRequests > 0
+                    ? `${pendingRequests} ${pendingRequests === 1 ? "cancion pendiente" : "canciones pendientes"} por revisar`
+                    : "Ver peticiones, aceptar canciones y gestionar Spotify"}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-2 text-sm font-bold sm:px-4">
+              <span className="hidden sm:inline">Abrir</span>
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
+        </Card>
+      </Link>
 
       {/* Accesos rapidos */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -118,7 +148,6 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
             {latestPhotos.slice(0, 6).map((img) => (
-               
               <img
                 key={img.id}
                 src={img.blob_url || "/placeholder.svg"}
