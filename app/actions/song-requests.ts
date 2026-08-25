@@ -28,7 +28,7 @@ const publicRequestSchema = z.object({
 })
 
 const adminStatusSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.coerce.number().int().positive(),
   status: z.enum(["pending", "accepted", "played", "rejected"]),
 })
 
@@ -72,7 +72,7 @@ export async function submitFreeSongRequest(input: {
 }
 
 export async function updateFreeSongRequestStatus(input: {
-  id: number
+  id: number | string
   status: FreeSongRequestStatus
 }) {
   await requireAdmin()

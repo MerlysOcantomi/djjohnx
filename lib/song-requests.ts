@@ -20,8 +20,14 @@ export type FreeSongRequest = {
   updated_at: string
 }
 
+type RawFreeSongRequest = Omit<FreeSongRequest, "id"> & { id: number | string }
+
+function normalizeRequest(row: RawFreeSongRequest): FreeSongRequest {
+  return { ...row, id: Number(row.id) }
+}
+
 export async function getFreeSongRequests(): Promise<FreeSongRequest[]> {
-  return (await sql`
+  const rows = (await sql`
     SELECT id, requester_name, song_title, artist_name, note, status,
            request_key, spotify_track_id, spotify_track_uri, spotify_track_url,
            spotify_artwork_url, spotify_added_at, created_at, updated_at
@@ -35,7 +41,8 @@ export async function getFreeSongRequests(): Promise<FreeSongRequest[]> {
       END,
       created_at DESC
     LIMIT 250
-  `) as FreeSongRequest[]
+  `) as RawFreeSongRequest[]
+  return rows.map(normalizeRequest)
 }
 
 export async function getFreeSongRequest(id: number): Promise<FreeSongRequest | null> {
@@ -44,8 +51,8 @@ export async function getFreeSongRequest(id: number): Promise<FreeSongRequest | 
            request_key, spotify_track_id, spotify_track_uri, spotify_track_url,
            spotify_artwork_url, spotify_added_at, created_at, updated_at
     FROM free_song_requests WHERE id = ${id} LIMIT 1
-  `) as FreeSongRequest[]
-  return rows[0] || null
+  `) as RawFreeSongRequest[]
+  return rows[0] ? normalizeRequest(rows[0]) : null
 }
 
 export async function hasRecentFreeSongRequest(requestKey: string): Promise<boolean> {
@@ -55,7 +62,7 @@ export async function hasRecentFreeSongRequest(requestKey: string): Promise<bool
     WHERE request_key = ${requestKey}
       AND created_at > now() - interval '90 seconds'
     LIMIT 1
-  `) as { id: number }[]
+  `) as { id: number | string }[]
   return rows.length > 0
 }
 
@@ -86,8 +93,8 @@ export async function createFreeSongRequest(input: {
       ${input.spotifyArtworkUrl || null}
     )
     RETURNING id
-  `) as { id: number }[]
-  return rows[0].id
+  `) as { id: number | string }[]
+  return Number(rows[0].id)
 }
 
 export async function setFreeSongRequestStatus(
