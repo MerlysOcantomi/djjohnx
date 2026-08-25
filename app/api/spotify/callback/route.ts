@@ -8,14 +8,10 @@ import {
   saveSpotifyConnection,
 } from "@/lib/spotify"
 
-function redirectUri() {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.djjohnx.com"
-  return new URL("/api/spotify/callback", base).toString()
-}
+const SPOTIFY_REDIRECT_URI = "https://www.djjohnx.com/api/spotify/callback"
 
 function adminUrl(path = "/admin/peticiones") {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.djjohnx.com"
-  return new URL(path, base)
+  return new URL(path, "https://www.djjohnx.com")
 }
 
 export async function GET(request: NextRequest) {
@@ -32,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(adminUrl("/admin/peticiones?spotify=error"))
     }
 
-    const tokens = await exchangeSpotifyCode(code, redirectUri())
+    const tokens = await exchangeSpotifyCode(code, SPOTIFY_REDIRECT_URI)
     if (!tokens.refresh_token) {
       return NextResponse.redirect(adminUrl("/admin/peticiones?spotify=no_refresh_token"))
     }
