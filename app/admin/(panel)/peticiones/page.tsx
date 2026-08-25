@@ -29,8 +29,8 @@ export default async function PeticionesPage() {
         </Button>
       </div>
 
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
               <Music2 className="h-5 w-5" />
@@ -48,18 +48,27 @@ export default async function PeticionesPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {spotify?.playlist_url && (
-              <Button asChild variant="outline" size="sm">
-                <a href={spotify.playlist_url} target="_blank" rel="noreferrer">
-                  Abrir playlist <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
+          {spotify ? (
+            <div className="flex flex-wrap gap-2">
+              {spotify.playlist_url && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={spotify.playlist_url} target="_blank" rel="noreferrer">
+                    Abrir playlist <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+              <Button asChild size="sm">
+                <Link href="/api/spotify/connect">Reconectar Spotify</Link>
               </Button>
-            )}
-            <Button asChild size="sm">
-              <Link href="/api/spotify/connect">{spotify ? "Reconectar Spotify" : "Conectar Spotify"}</Link>
+            </div>
+          ) : (
+            <Button asChild size="lg" className="h-12 w-full px-6 text-base font-semibold sm:w-auto">
+              <Link href="/api/spotify/connect">
+                <Music2 className="mr-2 h-5 w-5" />
+                Conectar cuenta de Spotify
+              </Link>
             </Button>
-          </div>
+          )}
         </div>
       </section>
 
