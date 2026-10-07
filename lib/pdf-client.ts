@@ -1,5 +1,81 @@
 "use client"
 
+async function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll("img"))
+
+  await Promise.all(
+    images.map(async (img) => {
+      if (!img.complete) {
+        await new Promise<void>((resolve) => {
+          const done = () => resolve()
+          img.addEventListener("load", done, { once: true })
+          img.addEventListener("error", done, { once: true })
+        })
+      }
+
+      if (typeof img.decode === "function") {
+        try {
+          await img.decode()
+        } catch {
+          // Si el navegador no puede decodificarla aqui, html2canvas intentara
+          // renderizarla igualmente. No bloqueamos la generacion del PDF.
+        }
+      }
+    }),
+  )
+}
+
+/**
+ * Crea una copia de la hoja A4 fuera del arbol visual de la vista previa.
+ *
+ * En movil la vista previa se muestra con CSS transform: scale(...). Aunque
+ * el transform viva en un ancestro, html2canvas puede incorporarlo al calculo
+ * de posiciones y comprimir las coordenadas sin escalar igual las fuentes.
+ * El resultado son textos superpuestos y un PDF de varias paginas.
+ *
+ * Capturamos una copia sin transforms, con el ancho A4 real, para que el PDF
+ * sea identico independientemente del tamano de pantalla desde el que se
+ * genera o comparte.
+ */
+function createUnscaledInvoiceClone(el: HTMLElement) {
+  const source =
+    (el.matches("[data-invoice-sheet]") ? el : el.querySelector<HTMLElement>("[data-invoice-sheet]")) || el
+
+  const host = document.createElement("div")
+  host.setAttribute("data-pdf-capture-host", "")
+  Object.assign(host.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: "210mm",
+    minHeight: "297mm",
+    margin: "0",
+    padding: "0",
+    overflow: "visible",
+    pointerEvents: "none",
+    zIndex: "-2147483647",
+    background: "#ffffff",
+    transform: "none",
+  })
+
+  const clone = source.cloneNode(true) as HTMLElement
+  Object.assign(clone.style, {
+    width: "210mm",
+    minHeight: "297mm",
+    maxWidth: "none",
+    margin: "0",
+    transform: "none",
+    transformOrigin: "top left",
+    boxShadow: "none",
+    background: "#ffffff",
+  })
+
+  host.appendChild(clone)
+  document.body.appendChild(host)
+
+  return { host, clone }
+}
+
 /**
  * Genera un PDF A4 a partir del nodo de la plantilla de factura.
  * Usa html2canvas-pro (soporta colores oklch) + jsPDF. Solo cliente.
@@ -11,38 +87,63 @@ export async function invoiceElementToPdfBlob(el: HTMLElement): Promise<Blob> {
     import("html2canvas-pro"),
   ])
 
-  const canvas = await html2canvas(el, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-  })
-
-  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" })
-  const pageWidth = 210
-  const pageHeight = 297
-  const imgWidth = pageWidth
-  const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-  const imgData = canvas.toDataURL("image/jpeg", 0.92)
-
-  if (imgHeight <= pageHeight) {
-    pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight)
-  } else {
-    // Varias paginas: recortar verticalmente.
-    let remaining = imgHeight
-    let position = 0
-    while (remaining > 0) {
-      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight)
-      remaining -= pageHeight
-      if (remaining > 0) {
-        pdf.addPage()
-        position -= pageHeight
-      }
-    }
+  // Espera a las fuentes web antes de medir/renderizar. En movil es frecuente
+  // que el usuario pulse Compartir antes de que terminen de cargar.
+  if (document.fonts?.ready) {
+    await document.fonts.ready
   }
 
-  return pdf.output("blob")
+  const { host, clone } = createUnscaledInvoiceClone(el)
+
+  try {
+    await waitForImages(clone)
+
+    const captureWidth = Math.ceil(clone.scrollWidth)
+    const captureHeight = Math.ceil(clone.scrollHeight)
+
+    if (captureWidth <= 0 || captureHeight <= 0) {
+      throw new Error("La hoja de factura no tiene dimensiones validas para generar el PDF")
+    }
+
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      width: captureWidth,
+      height: captureHeight,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight,
+      scrollX: 0,
+      scrollY: 0,
+    })
+
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" })
+    const pageWidth = 210
+    const pageHeight = 297
+    const imgWidth = pageWidth
+    const rawImgHeight = (canvas.height * imgWidth) / canvas.width
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.94)
+
+    // Una hoja A4 renderizada en pixeles puede diferir unas decimas por
+    // redondeo. Evitamos crear una pagina vacia por esa diferencia.
+    const singlePageToleranceMm = 1
+    if (rawImgHeight <= pageHeight + singlePageToleranceMm) {
+      pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, pageHeight)
+    } else {
+      const pageCount = Math.ceil(rawImgHeight / pageHeight)
+
+      for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+        if (pageIndex > 0) pdf.addPage()
+        pdf.addImage(imgData, "JPEG", 0, -(pageIndex * pageHeight), imgWidth, rawImgHeight)
+      }
+    }
+
+    return pdf.output("blob")
+  } finally {
+    host.remove()
+  }
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
