@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { getSettings, getInvoice, getInvoiceItems } from "@/lib/data"
+import { getClientLookups } from "@/lib/clients-data"
 import { toDateInput } from "@/lib/date-only"
 import { InvoiceEditor } from "@/components/admin/invoice-editor"
 import { InvoiceNumberEditor } from "@/components/admin/invoice-number-editor"
@@ -11,10 +12,11 @@ export default async function EditarFacturaPage({ params }: { params: Promise<{ 
   const invoiceId = Number.parseInt(id, 10)
   if (!Number.isFinite(invoiceId)) notFound()
 
-  const [invoice, items, settings] = await Promise.all([
+  const [invoice, items, settings, clients] = await Promise.all([
     getInvoice(invoiceId),
     getInvoiceItems(invoiceId),
     getSettings(),
+    getClientLookups(),
   ])
   if (!invoice) notFound()
 
@@ -31,7 +33,7 @@ export default async function EditarFacturaPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6">
       <InvoiceNumberEditor invoiceId={invoice.id} initialNumber={invoice.number} status={invoice.status} />
-      <InvoiceEditor mode="edit" settings={settings} invoice={normalizedInvoice} items={normalizedItems} />
+      <InvoiceEditor clients={clients} mode="edit" settings={settings} invoice={normalizedInvoice} items={normalizedItems} />
     </div>
   )
 }

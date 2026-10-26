@@ -1,10 +1,11 @@
 import { getJobs } from "@/lib/data"
+import { getClientLookups } from "@/lib/clients-data"
 import { JobsManager } from "@/components/admin/jobs-manager"
 
 export const dynamic = "force-dynamic"
 
 export default async function TrabajosPage() {
-  const jobs = await getJobs()
+  const [jobs, clients] = await Promise.all([getJobs(), getClientLookups()])
   return (
     <div className="space-y-6">
       <div>
@@ -13,7 +14,7 @@ export default async function TrabajosPage() {
           Registra tus bolos, controla cobros y genera facturas.
         </p>
       </div>
-      <JobsManager initialJobs={jobs} />
+      <JobsManager initialJobs={jobs} clients={clients} />
     </div>
   )
 }
