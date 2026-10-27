@@ -22,7 +22,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.28.0 --activate
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prod=false
       - name: TypeScript
         run: pnpm run typecheck
       - name: ESLint
