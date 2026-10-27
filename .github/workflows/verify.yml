@@ -26,7 +26,7 @@ jobs:
       - name: TypeScript
         run: pnpm run typecheck
       - name: ESLint
-        run: pnpm run lint
+        run: pnpm dlx eslint@10 .
       - name: Unit tests
         run: pnpm run test
       - name: Next.js build
