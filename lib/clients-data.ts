@@ -3,12 +3,7 @@ import { sql } from "@/lib/db"
 import type { Client, ClientLookup } from "@/lib/client-model"
 
 export async function getClients(): Promise<Client[]> {
-  try {
-    return await sql`SELECT * FROM clients ORDER BY display_name ASC, id ASC` as Client[]
-  } catch (error) {
-    console.error("[clientes] No se pudieron cargar las fichas:", error)
-    return []
-  }
+  return await sql`SELECT * FROM clients ORDER BY display_name ASC, id ASC` as Client[]
 }
 
 export async function getClientLookups(): Promise<ClientLookup[]> {

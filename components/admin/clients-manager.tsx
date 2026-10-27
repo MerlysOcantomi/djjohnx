@@ -45,7 +45,11 @@ export function ClientsManager({initialClients}:{initialClients:Client[]}) {
         const res=await fetch("/api/admin/client-extract",{method:"POST",body:form})
         const data=await res.json()
         if(!res.ok) throw new Error(data.error || "No se pudo leer")
-        setSelected(prev=>({...emptyClientDraft(),...prev,...data.client,id:prev?.id}))
+        setSelected(prev => {
+          const base = prev ?? emptyClientDraft()
+          const detected = Object.fromEntries(Object.entries(data.client as Record<string, unknown>).filter(([, value]) => typeof value === "string" && value.trim() !== ""))
+          return { ...base, ...detected, id: base.id }
+        })
         toast.success("Datos detectados: revisa todos los campos antes de guardar")
       } catch(e) {toast.error(e instanceof Error?e.message:"No se pudo extraer")}
     })
