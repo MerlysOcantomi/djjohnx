@@ -1,0 +1,33 @@
+name: Verify DJJOHNX
+
+on:
+  pull_request:
+  push:
+    branches:
+      - feat/clientes-fichas-importacion
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: TypeScript
+        run: pnpm run typecheck
+      - name: ESLint
+        run: pnpm dlx eslint@10 .
+      - name: Unit tests
+        run: pnpm run test
+      - name: Next.js build
+        run: pnpm run build

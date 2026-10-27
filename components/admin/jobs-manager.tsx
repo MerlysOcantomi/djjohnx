@@ -1,4 +1,6 @@
 "use client"
+import { ClientPicker } from "@/components/admin/client-picker"
+import type { ClientLookup } from "@/lib/client-model"
 
 import { useEffect, useState, useMemo, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -75,6 +77,7 @@ type Draft = {
   id?: number
   jobDate: string
   clientName: string
+  clientId: number | null
   company: string
   venue: string
   address: string
@@ -97,6 +100,7 @@ function toDraft(j?: Job): Draft {
     id: j?.id,
     jobDate: j?.job_date ? j.job_date.slice(0, 10) : "",
     clientName: j?.client_name ?? "",
+    clientId: j?.client_id ?? null,
     company: j?.company ?? "",
     venue: j?.venue ?? "",
     address: j?.address ?? "",
@@ -111,7 +115,7 @@ function toDraft(j?: Job): Draft {
   }
 }
 
-export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
+export function JobsManager({ initialJobs, clients }: { initialJobs: Job[]; clients: ClientLookup[] }) {
   const router = useRouter()
   // Los trabajos vienen del Server Component y se refrescan con router.refresh().
   // No se guardan en useState: eso congelaria la lista con los props iniciales
@@ -396,7 +400,10 @@ export function JobsManager({ initialJobs }: { initialJobs: Job[] }) {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Cliente</Label>
-                  <Input value={draft.clientName} onChange={(e) => setDraft({ ...draft, clientName: e.target.value })} />
+                  <ClientPicker clients={clients} value={draft.clientName} selectedId={draft.clientId}
+                    onChange={(name) => setDraft({ ...draft, clientName: name, clientId: null })}
+                    onSelect={(c) => setDraft({ ...draft, clientId: c.id, clientName: c.contact_name || c.display_name,
+                      company: c.kind === "company" ? (c.legal_name || c.display_name) : "" })} />
                 </div>
                 <div className="space-y-1">
                   <Label>Empresa</Label>

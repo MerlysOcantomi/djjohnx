@@ -118,6 +118,7 @@ export const GALLERY_CATEGORIES = [
 
 export type Job = {
   id: number
+  client_id: number | null
   job_date: string | null
   client_name: string
   company: string | null
@@ -152,6 +153,7 @@ export type InvoiceItem = {
 
 export type Invoice = {
   id: number
+  client_id: number | null
   number: string
   status: string
   issue_date: string | null

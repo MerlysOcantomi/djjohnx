@@ -1,4 +1,5 @@
 import { getSettings, getJob } from "@/lib/data"
+import { getClientLookups } from "@/lib/clients-data"
 import { toDateInput } from "@/lib/date-only"
 import { InvoiceEditor } from "@/components/admin/invoice-editor"
 
@@ -10,7 +11,7 @@ export default async function NuevaFacturaPage({
   searchParams: Promise<{ job?: string }>
 }) {
   const { job: jobParam } = await searchParams
-  const settings = await getSettings()
+  const [settings, clients] = await Promise.all([getSettings(), getClientLookups()])
 
   // Prefill opcional desde un trabajo.
   let prefill = null
@@ -29,8 +30,9 @@ export default async function NuevaFacturaPage({
 
       prefill = {
         jobId: job.id,
+        clientId: job.client_id,
         clientName: billTo,
-        clientAddress: job.address,
+        clientAddress: clients.find(c => c.id === job.client_id)?.address ?? "",
         issueDate: jobDate,
         lines: [
           {
@@ -47,6 +49,7 @@ export default async function NuevaFacturaPage({
 
   return (
     <InvoiceEditor
+      clients={clients}
       mode="create"
       settings={settings}
       prefill={prefill}

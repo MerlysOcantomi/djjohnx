@@ -31,6 +31,7 @@ function revalidateAll() {
 const jobSchema = z.object({
   id: z.number().int().positive().optional(),
   jobDate: z.string().optional().default(""),
+  clientId: z.number().int().positive().nullable().optional(),
   clientName: z.string().min(1, "El cliente es obligatorio").max(200),
   company: z.string().max(200).optional().default(""),
   venue: z.string().max(200).optional().default(""),
@@ -60,7 +61,7 @@ export async function saveJob(input: unknown) {
     const paymentStatus = paymentStatusFor(amount, paid, Boolean(linked[0]?.invoice_id))
     await sql`
       UPDATE jobs SET
-        job_date = ${date}, client_name = ${d.clientName}, company = ${d.company || null},
+        job_date = ${date}, client_id = ${d.clientId ?? null}, client_name = ${d.clientName}, company = ${d.company || null},
         venue = ${d.venue || null}, address = ${d.address || null}, concept = ${d.concept || null},
         description = ${d.description || null}, start_time = ${d.startTime || null}, end_time = ${d.endTime || null},
         amount_minor = ${amount}, paid_minor = ${paid}, job_status = ${d.jobStatus},
@@ -70,9 +71,9 @@ export async function saveJob(input: unknown) {
   } else {
     const paymentStatus = paymentStatusFor(amount, paid, false)
     await sql`
-      INSERT INTO jobs (job_date, client_name, company, venue, address, concept, description,
+      INSERT INTO jobs (job_date, client_id, client_name, company, venue, address, concept, description,
         start_time, end_time, amount_minor, paid_minor, job_status, payment_status, notes)
-      VALUES (${date}, ${d.clientName}, ${d.company || null}, ${d.venue || null}, ${d.address || null},
+      VALUES (${date}, ${d.clientId ?? null}, ${d.clientName}, ${d.company || null}, ${d.venue || null}, ${d.address || null},
         ${d.concept || null}, ${d.description || null}, ${d.startTime || null}, ${d.endTime || null},
         ${amount}, ${paid}, ${d.jobStatus}, ${paymentStatus}, ${d.notes || null})
     `

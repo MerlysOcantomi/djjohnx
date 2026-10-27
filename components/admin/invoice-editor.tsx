@@ -1,4 +1,6 @@
 "use client"
+import { ClientPicker } from "@/components/admin/client-picker"
+import type { ClientLookup } from "@/lib/client-model"
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
@@ -28,6 +30,7 @@ type EditorLine = {
 
 type Prefill = {
   jobId?: number
+  clientId?: number | null
   clientName?: string | null
   clientAddress?: string | null
   issueDate?: string | null
@@ -44,6 +47,7 @@ function emptyLine(): EditorLine {
 
 export function InvoiceEditor({
   mode,
+  clients,
   settings,
   invoice,
   items,
@@ -51,6 +55,7 @@ export function InvoiceEditor({
   initialValues,
 }: {
   mode: "create" | "edit"
+  clients: ClientLookup[]
   settings: SiteSettings
   invoice?: Invoice
   items?: InvoiceItem[]
@@ -66,16 +71,18 @@ export function InvoiceEditor({
   const jobId: number | null = invoice?.job_id ?? prefill?.jobId ?? null
   const currency = invoice?.currency ?? initialValues?.currency ?? "EUR"
 
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(invoice?.client_id ?? prefill?.clientId ?? null)
+  const matchedClient = clients.find(c => c.id === (invoice?.client_id ?? prefill?.clientId))
   const [client, setClient] = useState({
-    name: invoice?.client_name ?? prefill?.clientName ?? "",
-    taxId: invoice?.client_tax_id ?? "",
-    address: invoice?.client_address ?? prefill?.clientAddress ?? "",
-    postalCode: invoice?.client_postal_code ?? "",
-    city: invoice?.client_city ?? "",
-    province: invoice?.client_province ?? "",
-    country: invoice?.client_country ?? "",
-    email: invoice?.client_email ?? "",
-    phone: invoice?.client_phone ?? "",
+    name: invoice?.client_name ?? prefill?.clientName ?? matchedClient?.display_name ?? "",
+    taxId: invoice?.client_tax_id ?? matchedClient?.tax_id ?? "",
+    address: invoice?.client_address ?? matchedClient?.address ?? prefill?.clientAddress ?? "",
+    postalCode: invoice?.client_postal_code ?? matchedClient?.postal_code ?? "",
+    city: invoice?.client_city ?? matchedClient?.city ?? "",
+    province: invoice?.client_province ?? matchedClient?.province ?? "",
+    country: invoice?.client_country ?? matchedClient?.country ?? "",
+    email: invoice?.client_email ?? matchedClient?.email ?? "",
+    phone: invoice?.client_phone ?? matchedClient?.phone ?? "",
   })
 
   const [lines, setLines] = useState<EditorLine[]>(() => {
@@ -155,6 +162,7 @@ export function InvoiceEditor({
       dueDate,
       currency,
       jobId,
+      clientId: selectedClientId,
       client: {
         name: client.name,
         taxId: client.taxId,
@@ -261,7 +269,12 @@ export function InvoiceEditor({
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1 sm:col-span-2">
                 <Label>Nombre o razon social</Label>
-                <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
+                <ClientPicker clients={clients} value={client.name} selectedId={selectedClientId}
+                  onChange={(name) => { setClient({ ...client, name }); setSelectedClientId(null) }}
+                  onSelect={(c) => { setSelectedClientId(c.id); setClient({ name: c.legal_name || c.display_name,
+                    taxId: c.tax_id || "", address: c.address || "", postalCode: c.postal_code || "",
+                    city: c.city || "", province: c.province || "", country: c.country || "",
+                    email: c.email || "", phone: c.phone || "" }) }} />
               </div>
               <div className="space-y-1">
                 <Label>NIF / CIF</Label>

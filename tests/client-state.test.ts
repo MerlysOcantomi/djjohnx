@@ -94,6 +94,7 @@ describe("el formulario de trabajos permite editar todos los campos", () => {
   // vuelta intacto y no habia forma de escribirlo desde el panel.
   const FIELDS = [
     "clientName",
+    "clientId",
     "company",
     "jobDate",
     "jobStatus",
@@ -113,7 +114,8 @@ describe("el formulario de trabajos permite editar todos los campos", () => {
       // Un control editable siempre escribe en el borrador con setDraft.
       const written = new RegExp(`setDraft\\(\\{\\s*\\.\\.\\.draft,\\s*${field}:`).test(source)
       const isSelect = new RegExp(`${field}: v as`).test(source)
-      expect(written || isSelect).toBe(true)
+      const isClientPicker = field === "clientId" && source.includes("clientId: c.id") && source.includes("setDraft(")
+      expect(written || isSelect || isClientPicker).toBe(true)
     })
   }
 

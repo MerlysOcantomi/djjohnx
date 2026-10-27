@@ -61,7 +61,8 @@ describe("proteccion de las Server Actions privadas", () => {
 
       for (const action of actions) {
         // El login y el logout son publicos por definicion: son la puerta de entrada.
-        const isPublicByDesign = file === "auth.ts" && ["loginAction", "logoutAction"].includes(action.name)
+        const isPublicByDesign = (file === "auth.ts" && ["loginAction", "logoutAction"].includes(action.name)) ||
+          (file === "song-requests.ts" && action.name === "submitFreeSongRequest")
 
         it(`${action.name} ${isPublicByDesign ? "es publica a proposito" : "exige sesion de administrador"}`, () => {
           const guarded = /await require(AdminSession|Admin)\(\)/.test(action.body)

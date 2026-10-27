@@ -25,6 +25,7 @@ const invoiceSchema = z.object({
   dueDate: z.string().nullable().optional(),
   currency: z.string().default("EUR"),
   jobId: z.number().nullable().optional(),
+  clientId: z.number().int().positive().nullable().optional(),
   client: z.object({
     name: z.string().nullable().optional(),
     taxId: z.string().nullable().optional(),
@@ -153,6 +154,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
         due_date = ${n(data.dueDate)},
         currency = ${data.currency},
         job_id = ${data.jobId ?? null},
+        client_id = ${data.clientId ?? null},
         client_name = ${n(data.client.name)},
         client_tax_id = ${n(data.client.taxId)},
         client_address = ${n(data.client.address)},
@@ -189,7 +191,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
   } else {
     const inserted = (await sql`
       INSERT INTO invoices (
-        number, status, issue_date, due_date, currency, job_id,
+        number, status, issue_date, due_date, currency, job_id, client_id,
         client_name, client_tax_id, client_address, client_postal_code, client_city,
         client_province, client_country, client_email, client_phone,
         discount_type, discount_value_minor, discount_percent,
@@ -198,7 +200,7 @@ async function persistInvoice(input: InvoiceInput, issue: boolean) {
         payment_method, payment_holder, payment_iban, payment_bic, payment_reference,
         payment_terms, client_notes, internal_notes
       ) VALUES (
-        ${number || DRAFT_NUMBER}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null},
+        ${number || DRAFT_NUMBER}, ${status}, ${n(data.issueDate)}, ${n(data.dueDate)}, ${data.currency}, ${data.jobId ?? null}, ${data.clientId ?? null},
         ${n(data.client.name)}, ${n(data.client.taxId)}, ${n(data.client.address)}, ${n(data.client.postalCode)}, ${n(data.client.city)},
         ${n(data.client.province)}, ${n(data.client.country)}, ${n(data.client.email)}, ${n(data.client.phone)},
         ${data.discountType}, ${data.discountValueMinor}, ${data.discountPercent},
