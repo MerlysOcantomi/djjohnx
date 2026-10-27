@@ -19,7 +19,7 @@ const clientSchema = z.object({
 
 const nullable = (value: string) => value || null
 
-export async function saveClient(input: unknown): Promise<{ id: number }> {
+export async function saveClient(input: unknown) {
   await requireAdmin()
   const d = clientSchema.parse(input)
   const taxId = d.taxId ? d.taxId.toUpperCase().replace(/\s+/g, "") : ""
