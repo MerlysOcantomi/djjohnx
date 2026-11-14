@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/navbar"
-import { Hero } from "@/components/hero"
+import { TunnelHero } from "@/components/tunnel-hero/tunnel-hero"
+import { IamGateway } from "@/components/iam-gateway"
 import { AboutSection } from "@/components/about-section"
 import { EventsSection } from "@/components/events-section"
 import { MoreEvents } from "@/components/more-events"
@@ -10,22 +11,31 @@ import { ContactSection } from "@/components/contact-section"
 import { SpotifyPlayer } from "@/components/spotify-player"
 import { Footer } from "@/components/footer"
 import { getSiteContent } from "@/lib/get-content"
+import { IAM_PROSOUND_URL, JOHNX_SECTION_ID } from "@/lib/site-links"
 
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
   const content = await getSiteContent()
+  const gateway = <IamGateway johnxHref={`#${JOHNX_SECTION_ID}`} prosoundHref={IAM_PROSOUND_URL} />
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen overflow-x-clip bg-background">
       {/* Navigation */}
       <Navbar />
 
-      {/* Hero Section */}
-      {content?.hero?.visible !== false && <Hero data={content?.hero} />}
+      {/* Hero: tunel 3D con scroll y, al terminar, los dos bloques IAM */}
+      {content?.hero?.visible !== false ? (
+        <TunnelHero data={content?.hero} gateway={gateway} />
+      ) : (
+        gateway
+      )}
 
-      {/* Marquee Banner */}
-      <div className="overflow-hidden border-y border-border/30 bg-muted/30 py-4">
+      {/* Marquee Banner: aqui empieza la seccion de John (destino de "ENTER") */}
+      <div
+        id={JOHNX_SECTION_ID}
+        className="scroll-mt-16 overflow-hidden border-y border-border/30 bg-muted/30 py-4 md:scroll-mt-20"
+      >
         <div className="animate-marquee flex whitespace-nowrap">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex items-center gap-8 px-4">

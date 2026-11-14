@@ -37,6 +37,9 @@ app/
     (panel)/               Panel protegido
   api/admin/blob-upload/   Emisión de token de subida a Blob
 components/                Secciones públicas y pantallas de admin
+  cinematic/               Motor de scroll (track + stage sticky + progreso 0..1)
+  tunnel-hero/             Portada: túnel 3D que se recorre con el scroll
+  iam-gateway.tsx          Bloques IAM DJ JOHNX / IAM PROSOUND
 lib/
   db.ts                    Cliente Neon (solo servidor)
   session.ts               Token de sesión firmado (compatible con Edge)
@@ -64,6 +67,53 @@ nunca se confía en los que envía el navegador.
 `import "server-only"` y se crea de forma perezosa, así que el build no necesita
 `DATABASE_URL`. Todas las consultas usan plantillas etiquetadas, que generan
 consultas parametrizadas; no se concatena nunca entrada del usuario en el SQL.
+
+---
+
+## Portada: el túnel
+
+La portada es una escena 3D real (three.js con React Three Fiber), no un vídeo
+ni una foto con zoom: la cámara avanza por un túnel rectangular de LED al hacer
+scroll y, al llegar al final, suben los dos bloques **IAM DJ JOHNX — ENTER** e
+**IAM PROSOUND — DISCOVER**.
+
+| Archivo | Qué hace |
+|---|---|
+| `components/cinematic/scroll-sequence.tsx` | Motor de scroll (mismos principios que el `ScrollSequence` de DJ-Canet): track largo, stage `sticky`, progreso 0..1 amortiguado |
+| `components/tunnel-hero/tunnel-config.ts` | Dimensiones, paleta, recorrido de cámara y punto del DJ set. Funciones puras, con pruebas |
+| `components/tunnel-hero/tunnel-world.ts` | Geometría: marcos LED, tiras de suelo, humo, polvo, tarima |
+| `components/tunnel-hero/tunnel-shaders.ts` | Iluminación analítica, halos de neón y suelo mojado reflectante |
+| `components/tunnel-hero/tunnel-canvas.tsx` | Lienzo WebGL, cámara, reflejo del suelo y resolución adaptativa |
+| `components/tunnel-hero/tunnel-hero.tsx` | Título, versión fija, "Saltar intro" y elección de modo |
+| `components/iam-gateway.tsx` | Los dos bloques |
+
+**Rendimiento.** Sin luces en tiempo real ni postprocesado; unas 10 llamadas de
+dibujo. La resolución se ajusta sola para mantener la fluidez, el render se
+detiene cuando la portada no está en pantalla y three.js solo se descarga si el
+túnel va a animarse.
+
+**Accesibilidad.** Con "reducir movimiento" activado, o sin WebGL, se muestra una
+imagen fija del túnel (`public/tunnel/poster-*.webp`) y los bloques quedan justo
+debajo, sin recorrido. Quien quiera puede activar el 3D con un botón. El enlace
+"Saltar intro" lleva directamente a los bloques.
+
+**DJ set.** El final del túnel es un escenario preparado (tarima, marco LED y
+contraluz) todavía vacío. El material de John se monta pasando un nodo 3D a la
+prop `djSet` de `<TunnelHero>`; su posición y volumen reservado están en
+`tunnelMetrics().djSet`.
+
+Parámetros de revisión en la URL:
+
+| Parámetro | Efecto |
+|---|---|
+| `?tunnel=static` | Fuerza la versión fija |
+| `?tunnel=live` | Fuerza el túnel 3D |
+| `?djset=guia` | Dibuja el volumen reservado para el DJ set |
+| `?dpr=1.5` | Fija la resolución de render |
+
+Si cambia el aspecto del túnel hay que regenerar las imágenes fijas con
+`node scripts/tunnel-poster.mjs http://localhost:3000` (requiere Playwright y
+ffmpeg; no son dependencias del proyecto).
 
 ---
 
@@ -102,11 +152,13 @@ http://localhost:3000/admin.
 | `ADMIN_PASSWORD` | **Privada** | Contraseña del panel |
 | `SESSION_SECRET` | **Privada** | Firma HMAC de la cookie de sesión |
 | `NEXT_PUBLIC_APP_URL` | Pública | Dominio canónico (`https://djjohnx.com`) |
+| `NEXT_PUBLIC_IAM_PROSOUND_URL` | Pública | Landing de IAM PROSOUND. Vacía = bloque "Próximamente" sin enlace |
 
 Reglas:
 
-- Solo `NEXT_PUBLIC_APP_URL` lleva el prefijo `NEXT_PUBLIC_`. **Ningún secreto
-  debe llevarlo nunca**: ese prefijo lo incrusta en el navegador.
+- Solo `NEXT_PUBLIC_APP_URL` y `NEXT_PUBLIC_IAM_PROSOUND_URL` llevan el prefijo
+  `NEXT_PUBLIC_`. **Ningún secreto debe llevarlo nunca**: ese prefijo lo
+  incrusta en el navegador.
 - `ADMIN_PASSWORD` tiene que ser una contraseña nueva y exclusiva del panel.
 - `SESSION_SECRET` no es la contraseña: es un valor distinto e independiente.
 - Ninguno de estos valores se guarda en el repositorio. `.env.example` solo

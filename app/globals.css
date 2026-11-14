@@ -208,6 +208,339 @@
   }
 }
 
+/* ===== Hero: tunel cinematografico ===== */
+/*
+ * Track largo + stage sticky (motor ScrollSequence). Se usa la altura "grande"
+ * del viewport (lvh): no cambia cuando el movil esconde la barra de direcciones,
+ * asi el lienzo WebGL nunca se redimensiona en mitad del scroll.
+ */
+.tunnel-root {
+  --tunnel-len: 5.5;
+  --tunnel-vh: 100vh;
+  position: relative;
+  background: #05030d;
+}
+
+@supports (height: 100lvh) {
+  .tunnel-root {
+    --tunnel-vh: 100lvh;
+  }
+}
+
+@media (orientation: portrait) {
+  .tunnel-root {
+    --tunnel-len: 5;
+  }
+}
+
+.tunnel-root .cine-track {
+  height: calc(var(--tunnel-len) * var(--tunnel-vh));
+}
+
+.cine-stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: var(--tunnel-vh, 100vh);
+  overflow: hidden;
+  overflow: clip;
+  background: #05030d;
+  isolation: isolate;
+}
+
+/* Los dos bloques suben por encima del ultimo alto de pantalla del tunel. */
+.tunnel-gateway {
+  position: relative;
+  z-index: 10;
+  margin-top: calc(-1 * var(--tunnel-vh));
+}
+
+/* Zona siempre visible aunque la barra del navegador movil este desplegada. */
+.tunnel-safe {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 100vh;
+  height: 100svh;
+}
+
+.tunnel-vignette {
+  background:
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(3, 2, 10, 0.72) 100%),
+    linear-gradient(to bottom, rgba(3, 2, 10, 0.55) 0%, transparent 16%);
+}
+
+.tunnel-intro {
+  position: relative;
+  transform-origin: 50% 55%;
+  text-shadow: 0 1px 14px rgba(3, 2, 10, 0.9);
+}
+
+/* Velo suave tras el texto: el titulo se lee sobre las luces del tunel. */
+.tunnel-intro::before {
+  content: "";
+  position: absolute;
+  inset: -22% -18%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(4, 2, 14, 0.62) 0%, rgba(4, 2, 14, 0.34) 55%, transparent 100%);
+}
+
+.tunnel-title {
+  text-shadow:
+    -0.022em 0 0 rgba(25, 194, 255, 0.75),
+    0.022em 0 0 rgba(255, 31, 200, 0.75),
+    0 0 0.32em rgba(138, 61, 255, 0.65),
+    0 0 1em rgba(43, 92, 255, 0.45);
+}
+
+.tunnel-hint__arrow {
+  animation: tunnel-hint 1.8s ease-in-out infinite;
+}
+
+@keyframes tunnel-hint {
+  0%, 100% { transform: translateY(-3px); opacity: 0.55; }
+  50% { transform: translateY(5px); opacity: 1; }
+}
+
+/* Version fija: sin recorrido, el hero ocupa una pantalla y los bloques van debajo. */
+.tunnel-root[data-mode="static"] .cine-track {
+  height: var(--tunnel-vh);
+}
+
+.tunnel-root[data-mode="static"] .tunnel-gateway {
+  margin-top: 0;
+}
+
+.tunnel-root[data-mode="static"] .tunnel-hint,
+.tunnel-root[data-mode="static"] .tunnel-skip {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tunnel-root:not([data-mode="live"]) .cine-track {
+    height: var(--tunnel-vh);
+  }
+
+  .tunnel-root:not([data-mode="live"]) .tunnel-gateway {
+    margin-top: 0;
+  }
+
+  .tunnel-root:not([data-mode="live"]) .tunnel-hint,
+  .tunnel-root:not([data-mode="live"]) .tunnel-skip {
+    display: none;
+  }
+
+  .tunnel-hint__arrow {
+    animation: none;
+  }
+}
+
+/* ===== Bloques IAM DJ JOHNX / IAM PROSOUND ===== */
+.iam-gateway {
+  display: flex;
+  min-height: var(--tunnel-vh, 100vh);
+  flex-direction: column;
+  justify-content: center;
+  padding: 6.5rem 1rem 4.5rem;
+  /* Arriba deja ver el final del tunel; abajo enlaza con el resto de la pagina. */
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 3, 13, 0) 0%,
+    rgba(5, 3, 13, 0.5) 30%,
+    rgba(5, 3, 13, 0.82) 72%,
+    var(--background) 100%
+  );
+}
+
+.iam-gateway__grid {
+  display: grid;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.iam-block {
+  --tone: #ff1fc8;
+  --tone-2: #8a3dff;
+  position: relative;
+  display: flex;
+  min-height: clamp(13.5rem, 36svh, 22rem);
+  align-items: flex-end;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1.5px solid color-mix(in srgb, var(--tone) 85%, white);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(90% 70% at 50% 45%, color-mix(in srgb, var(--tone-2) 26%, transparent) 0%, transparent 70%),
+    rgba(7, 5, 20, 0.86);
+  box-shadow:
+    0 0 26px -6px var(--tone),
+    0 0 90px -30px var(--tone-2),
+    inset 0 0 46px -18px var(--tone);
+  color: #fff;
+  text-decoration: none;
+  transition:
+    box-shadow 0.5s ease,
+    border-color 0.5s ease,
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.iam-block[data-tone="prosound"] {
+  --tone: #19c2ff;
+  --tone-2: #2b5cff;
+}
+
+.iam-block__depth,
+.iam-block__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.iam-block__depth {
+  z-index: -2;
+}
+
+.iam-block__depth > span {
+  position: absolute;
+  border: 1.5px solid var(--tone);
+  border-right-color: var(--tone-2);
+  border-bottom-color: var(--tone-2);
+  border-radius: 0.8rem;
+  box-shadow:
+    0 0 14px -3px var(--tone),
+    inset 0 0 14px -5px var(--tone-2);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.iam-block__shade {
+  z-index: -1;
+  background: linear-gradient(to top, rgba(5, 3, 13, 0.92) 0%, rgba(5, 3, 13, 0.55) 34%, transparent 62%);
+}
+
+.iam-block__body {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding: 1.5rem;
+}
+
+.iam-block__title {
+  display: flex;
+  flex-direction: column;
+  line-height: 0.92;
+}
+
+.iam-block__iam {
+  margin-bottom: 0.55rem;
+  font-size: clamp(0.95rem, 2.4vw, 1.35rem);
+  font-weight: 300;
+  letter-spacing: 0.55em;
+  color: color-mix(in srgb, var(--tone) 55%, white);
+}
+
+.iam-block__name {
+  font-size: clamp(2.5rem, 9.5vw, 5.25rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 0 0.5em color-mix(in srgb, var(--tone) 60%, transparent);
+}
+
+.iam-block__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 70%, white);
+  border-radius: 999px;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  transition:
+    background-color 0.35s ease,
+    gap 0.35s ease;
+}
+
+.iam-block__soon {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(5, 3, 13, 0.6);
+}
+
+.iam-block[data-pending] .iam-block__cta {
+  opacity: 0.6;
+}
+
+a.iam-block:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  a.iam-block:hover {
+    box-shadow:
+      0 0 40px -4px var(--tone),
+      0 0 120px -24px var(--tone-2),
+      inset 0 0 70px -18px var(--tone);
+  }
+
+  a.iam-block:hover .iam-block__cta {
+    gap: 1rem;
+    background: color-mix(in srgb, var(--tone) 34%, transparent);
+  }
+
+  /* Al pasar el cursor los marcos se acercan: la puerta "tira" hacia dentro. */
+  a.iam-block:hover .iam-block__depth > span {
+    transform: scale(calc(1.06 + var(--step) * 0.035));
+  }
+}
+
+@media (min-width: 768px) {
+  .iam-gateway {
+    padding: 8rem 2rem 6rem;
+  }
+
+  .iam-gateway__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .iam-block {
+    min-height: clamp(24rem, 64vh, 38rem);
+  }
+
+  .iam-block__body {
+    padding: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iam-block,
+  .iam-block__depth > span,
+  .iam-block__cta {
+    transition: none;
+  }
+
+  a.iam-block:hover .iam-block__depth > span {
+    transform: none;
+  }
+}
+
 /* ===== Factura A4 ===== */
 .invoice-sheet {
   width: 210mm;
