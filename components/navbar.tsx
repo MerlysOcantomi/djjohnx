@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 
 const navLinks = [
+  { href: "/", label: "Entrada" },
   { href: "#inicio", label: "Inicio" },
   { href: "#sobre-mi", label: "Sobre Mí" },
   { href: "#eventos", label: "Eventos" },
@@ -46,7 +47,7 @@ export function Navbar() {
               height={48}
               className="h-10 w-10 object-contain md:h-12 md:w-12"
             />
-            <span className="text-xl font-black tracking-wider text-gradient-gold md:text-2xl">
+            <span className="text-xl font-black tracking-wider text-white md:text-2xl">
               DJ JOHNX
             </span>
           </a>
@@ -92,7 +93,7 @@ export function Navbar() {
                       height={40}
                       className="h-10 w-10 object-contain"
                     />
-                    <span className="text-2xl font-black tracking-wider text-gradient-gold">
+                    <span className="text-2xl font-black tracking-wider text-white">
                       DJ JOHNX
                     </span>
                   </div>
