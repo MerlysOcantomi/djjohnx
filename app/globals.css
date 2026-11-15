@@ -208,335 +208,325 @@
   }
 }
 
-/* ===== Hero: tunel cinematografico ===== */
+/* ===== Home: tunel de entrada ===== */
 /*
- * Track largo + stage sticky (motor ScrollSequence). Se usa la altura "grande"
- * del viewport (lvh): no cambia cuando el movil esconde la barra de direcciones,
- * asi el lienzo WebGL nunca se redimensiona en mitad del scroll.
+ * La Home es una sola pantalla: el tunel no se recorre desplazando la pagina,
+ * sino que la rueda, el dedo y el teclado mueven la camara. Por eso no hay
+ * scroll ni rebote al arrastrar.
  */
-.tunnel-root {
-  --tunnel-len: 5.5;
-  --tunnel-vh: 100vh;
+html:has(.tunnel-home) {
+  overscroll-behavior: none;
+}
+
+.tunnel-home {
   position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: #05030d;
-}
-
-@supports (height: 100lvh) {
-  .tunnel-root {
-    --tunnel-vh: 100lvh;
-  }
-}
-
-@media (orientation: portrait) {
-  .tunnel-root {
-    --tunnel-len: 5;
-  }
-}
-
-.tunnel-root .cine-track {
-  height: calc(var(--tunnel-len) * var(--tunnel-vh));
 }
 
 .cine-stage {
-  position: sticky;
-  top: 0;
-  width: 100%;
-  height: var(--tunnel-vh, 100vh);
+  position: fixed;
+  inset: 0;
   overflow: hidden;
-  overflow: clip;
   background: #05030d;
   isolation: isolate;
-}
-
-/* Los dos bloques suben por encima del ultimo alto de pantalla del tunel. */
-.tunnel-gateway {
-  position: relative;
-  z-index: 10;
-  margin-top: calc(-1 * var(--tunnel-vh));
-}
-
-/* Zona siempre visible aunque la barra del navegador movil este desplegada. */
-.tunnel-safe {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 100vh;
-  height: 100svh;
+  /* El arrastre vertical lo interpreta el recorrido, no el navegador. */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tunnel-vignette {
-  background:
-    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(3, 2, 10, 0.72) 100%),
-    linear-gradient(to bottom, rgba(3, 2, 10, 0.55) 0%, transparent 16%);
+  background: radial-gradient(120% 90% at 50% 45%, transparent 58%, rgba(3, 2, 10, 0.62) 100%);
 }
 
-.tunnel-intro {
-  position: relative;
-  transform-origin: 50% 55%;
-  text-shadow: 0 1px 14px rgba(3, 2, 10, 0.9);
-}
-
-/* Velo suave tras el texto: el titulo se lee sobre las luces del tunel. */
-.tunnel-intro::before {
-  content: "";
+/* Unico control visible durante el paseo. */
+.tunnel-skip {
   position: absolute;
-  inset: -22% -18%;
-  z-index: -1;
-  background: radial-gradient(closest-side, rgba(4, 2, 14, 0.62) 0%, rgba(4, 2, 14, 0.34) 55%, transparent 100%);
+  right: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  transition: color 0.25s ease;
 }
 
-.tunnel-title {
-  text-shadow:
-    -0.022em 0 0 rgba(25, 194, 255, 0.75),
-    0.022em 0 0 rgba(255, 31, 200, 0.75),
-    0 0 0.32em rgba(138, 61, 255, 0.65),
-    0 0 1em rgba(43, 92, 255, 0.45);
+.tunnel-skip:hover {
+  color: #fff;
 }
 
-.tunnel-hint__arrow {
-  animation: tunnel-hint 1.8s ease-in-out infinite;
+.tunnel-skip:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  color: #fff;
 }
 
-@keyframes tunnel-hint {
-  0%, 100% { transform: translateY(-3px); opacity: 0.55; }
-  50% { transform: translateY(5px); opacity: 1; }
-}
-
-/* Version fija: sin recorrido, el hero ocupa una pantalla y los bloques van debajo. */
-.tunnel-root[data-mode="static"] .cine-track {
-  height: var(--tunnel-vh);
-}
-
-.tunnel-root[data-mode="static"] .tunnel-gateway {
-  margin-top: 0;
-}
-
-.tunnel-root[data-mode="static"] .tunnel-hint,
-.tunnel-root[data-mode="static"] .tunnel-skip {
+.tunnel-home:not([data-mode="live"]) .tunnel-skip {
   display: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tunnel-root:not([data-mode="live"]) .cine-track {
-    height: var(--tunnel-vh);
-  }
-
-  .tunnel-root:not([data-mode="live"]) .tunnel-gateway {
-    margin-top: 0;
-  }
-
-  .tunnel-root:not([data-mode="live"]) .tunnel-hint,
-  .tunnel-root:not([data-mode="live"]) .tunnel-skip {
-    display: none;
-  }
-
-  .tunnel-hint__arrow {
-    animation: none;
-  }
+/* Version fija por "reducir movimiento": opcion de ver el recorrido. */
+.tunnel-optin {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.6rem 0.95rem;
+  background: rgba(5, 3, 13, 0.55);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
 }
 
-/* ===== Bloques IAM DJ JOHNX / IAM PROSOUND ===== */
-.iam-gateway {
-  display: flex;
-  min-height: var(--tunnel-vh, 100vh);
-  flex-direction: column;
-  justify-content: center;
-  padding: 6.5rem 1rem 4.5rem;
-  /* Arriba deja ver el final del tunel; abajo enlaza con el resto de la pagina. */
-  background: linear-gradient(
-    to bottom,
-    rgba(5, 3, 13, 0) 0%,
-    rgba(5, 3, 13, 0.5) 30%,
-    rgba(5, 3, 13, 0.82) 72%,
-    var(--background) 100%
-  );
+.tunnel-optin:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
 }
 
-.iam-gateway__grid {
+.tunnel-optin:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ===== Accesos IAM DJ JOHNX / IAM PROSOUND ===== */
+.tunnel-accesses {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 30;
   display: grid;
-  width: 100%;
-  max-width: 76rem;
-  margin: 0 auto;
-  gap: 1rem;
+  gap: 0.625rem;
+  padding: 0 0.875rem max(0.875rem, env(safe-area-inset-bottom));
+  opacity: 0;
+  transform: translate3d(0, 1.75rem, 0);
+  pointer-events: none;
+  transition:
+    opacity 0.7s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.iam-block {
-  --tone: #ff1fc8;
-  --tone-2: #8a3dff;
+/* Al llegar al escenario, o desde el principio en la version fija. */
+.tunnel-accesses[data-open],
+.tunnel-home[data-mode="static"] .tunnel-accesses {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/*
+ * Red de seguridad: si el JavaScript tarda o no llega a arrancar, los accesos
+ * aparecen igualmente sobre la imagen fija. En cuanto la pagina arranca
+ * (data-mode), deja de aplicarse.
+ */
+.tunnel-home:not([data-mode]) .tunnel-accesses {
+  animation: tunnel-accesses-fallback 0.6s ease 7s forwards;
+}
+
+@keyframes tunnel-accesses-fallback {
+  to {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+
+.tunnel-access {
+  --tone: #ff45d2;
+  --tone-2: #9b5cff;
+  --tone-soft: #ffb3ee;
   position: relative;
   display: flex;
-  min-height: clamp(13.5rem, 36svh, 22rem);
-  align-items: flex-end;
+  min-height: 5.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   overflow: hidden;
-  isolation: isolate;
-  border: 1.5px solid color-mix(in srgb, var(--tone) 85%, white);
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(90% 70% at 50% 45%, color-mix(in srgb, var(--tone-2) 26%, transparent) 0%, transparent 70%),
-    rgba(7, 5, 20, 0.86);
-  box-shadow:
-    0 0 26px -6px var(--tone),
-    0 0 90px -30px var(--tone-2),
-    inset 0 0 46px -18px var(--tone);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1.1rem;
+  padding: 1rem 1rem 1rem 1.2rem;
+  background: linear-gradient(180deg, rgba(15, 12, 32, 0.84) 0%, rgba(7, 5, 18, 0.94) 100%);
   color: #fff;
   text-decoration: none;
   transition:
-    box-shadow 0.5s ease,
-    border-color 0.5s ease,
-    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.iam-block[data-tone="prosound"] {
-  --tone: #19c2ff;
-  --tone-2: #2b5cff;
+.tunnel-access[data-tone="prosound"] {
+  --tone: #2ccaff;
+  --tone-2: #4a74ff;
+  --tone-soft: #b4ecff;
 }
 
-.iam-block__depth,
-.iam-block__shade {
+/* Linea de color: la unica seña de identidad de cada acceso. */
+.tunnel-access::before {
+  content: "";
   position: absolute;
-  inset: 0;
-  pointer-events: none;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--tone) 0%, var(--tone-2) 60%, transparent 100%);
+  transform: scaleX(0.5);
+  transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.iam-block__depth {
-  z-index: -2;
-}
-
-.iam-block__depth > span {
-  position: absolute;
-  border: 1.5px solid var(--tone);
-  border-right-color: var(--tone-2);
-  border-bottom-color: var(--tone-2);
-  border-radius: 0.8rem;
-  box-shadow:
-    0 0 14px -3px var(--tone),
-    inset 0 0 14px -5px var(--tone-2);
-  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.iam-block__shade {
-  z-index: -1;
-  background: linear-gradient(to top, rgba(5, 3, 13, 0.92) 0%, rgba(5, 3, 13, 0.55) 34%, transparent 62%);
-}
-
-.iam-block__body {
+.tunnel-access__label {
   display: flex;
-  width: 100%;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem 1.5rem;
-  padding: 1.5rem;
-}
-
-.iam-block__title {
-  display: flex;
+  min-width: 0;
   flex-direction: column;
-  line-height: 0.92;
+  gap: 0.5rem;
 }
 
-.iam-block__iam {
-  margin-bottom: 0.55rem;
-  font-size: clamp(0.95rem, 2.4vw, 1.35rem);
-  font-weight: 300;
-  letter-spacing: 0.55em;
-  color: color-mix(in srgb, var(--tone) 55%, white);
+.tunnel-access__iam {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  color: var(--tone-soft);
 }
 
-.iam-block__name {
-  font-size: clamp(2.5rem, 9.5vw, 5.25rem);
+.tunnel-access__name {
+  font-size: clamp(1.65rem, 7.6vw, 2.3rem);
   font-weight: 900;
+  line-height: 0.95;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  text-shadow: 0 0 0.5em color-mix(in srgb, var(--tone) 60%, transparent);
+  white-space: nowrap;
 }
 
-.iam-block__cta {
+.tunnel-access__cta {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--tone) 70%, white);
-  border-radius: 999px;
-  padding: 0.7rem 1.25rem;
-  font-size: 0.74rem;
+  gap: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.32em;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--tone) 14%, transparent);
-  transition:
-    background-color 0.35s ease,
-    gap 0.35s ease;
+  white-space: nowrap;
 }
 
-.iam-block__soon {
-  position: absolute;
-  top: 1.1rem;
-  right: 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+.tunnel-access__arrow {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 999px;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.62rem;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tunnel-access[data-pending] .tunnel-access__cta {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tunnel-access__soon {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.56rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(5, 3, 13, 0.6);
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.iam-block[data-pending] .iam-block__cta {
-  opacity: 0.6;
-}
-
-a.iam-block:focus-visible {
+a.tunnel-access:focus-visible {
   outline: 2px solid #fff;
-  outline-offset: 4px;
+  outline-offset: 3px;
+}
+
+a.tunnel-access:active {
+  transform: scale(0.985);
 }
 
 @media (hover: hover) {
-  a.iam-block:hover {
-    box-shadow:
-      0 0 40px -4px var(--tone),
-      0 0 120px -24px var(--tone-2),
-      inset 0 0 70px -18px var(--tone);
+  a.tunnel-access:hover {
+    border-color: rgba(255, 255, 255, 0.36);
+    background-color: rgba(26, 20, 52, 0.5);
+    transform: translateY(-3px);
   }
 
-  a.iam-block:hover .iam-block__cta {
-    gap: 1rem;
-    background: color-mix(in srgb, var(--tone) 34%, transparent);
+  a.tunnel-access:hover::before {
+    transform: scaleX(1);
   }
 
-  /* Al pasar el cursor los marcos se acercan: la puerta "tira" hacia dentro. */
-  a.iam-block:hover .iam-block__depth > span {
-    transform: scale(calc(1.06 + var(--step) * 0.035));
+  a.tunnel-access:hover .tunnel-access__arrow {
+    border-color: transparent;
+    background-color: var(--tone);
+    color: #07051a;
+    transform: translateX(4px);
   }
 }
 
-@media (min-width: 768px) {
-  .iam-gateway {
-    padding: 8rem 2rem 6rem;
+@media (min-width: 640px) {
+  .tunnel-skip {
+    right: 1.5rem;
+    bottom: 1.5rem;
   }
 
-  .iam-gateway__grid {
+  .tunnel-accesses {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    gap: 1rem;
+    padding: 0 clamp(1.25rem, 4vw, 3.5rem) clamp(1.1rem, 3.4vh, 2.25rem);
   }
 
-  .iam-block {
-    min-height: clamp(24rem, 64vh, 38rem);
+  .tunnel-access {
+    min-height: clamp(6.25rem, 18vh, 10.5rem);
+    padding: 1.25rem clamp(1.1rem, 2vw, 1.9rem) 1.25rem clamp(1.3rem, 2.4vw, 2.2rem);
   }
 
-  .iam-block__body {
-    padding: 2.25rem;
+  .tunnel-access__iam {
+    font-size: clamp(0.7rem, 0.95vw, 0.86rem);
+  }
+
+  .tunnel-access__name {
+    font-size: clamp(1.9rem, 4.1vw, 3.75rem);
+  }
+
+  .tunnel-access__cta {
+    gap: clamp(0.7rem, 1.2vw, 1.1rem);
+    font-size: clamp(0.68rem, 0.85vw, 0.8rem);
+  }
+
+  .tunnel-access__arrow {
+    width: clamp(2.6rem, 4vw, 3.5rem);
+    height: clamp(2.6rem, 4vw, 3.5rem);
+  }
+
+  .tunnel-access__soon {
+    font-size: 0.62rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .iam-block,
-  .iam-block__depth > span,
-  .iam-block__cta {
+  .tunnel-accesses,
+  .tunnel-access,
+  .tunnel-access::before,
+  .tunnel-access__arrow {
     transition: none;
   }
 
-  a.iam-block:hover .iam-block__depth > span {
+  a.tunnel-access:hover,
+  a.tunnel-access:hover .tunnel-access__arrow {
     transform: none;
   }
 }

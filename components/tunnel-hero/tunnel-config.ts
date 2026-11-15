@@ -67,6 +67,9 @@ export const FRAME_COLORS: readonly (readonly [string, string])[] = [
 /** Niebla y oscuridad de fondo. */
 export const HAZE_COLOR = "#0c0726"
 
+/** Separacion entre el marco LED de la pared del fondo y los bordes del tunel. */
+export const BACK_FRAME_INSET = 0.78
+
 export type TunnelMetrics = {
   firstFrameZ: number
   lastFrameZ: number
@@ -115,28 +118,29 @@ export function tunnelMetrics(layout: TunnelLayout): TunnelMetrics {
   }
 }
 
-export type TravelPhases = {
-  /** 0..1 mientras la camara recorre el tunel. */
-  travel: number
-  /** 0..1 mientras los dos bloques suben por encima del final del tunel. */
-  tail: number
-  /** Progreso en el que termina el recorrido y empieza la transicion. */
-  cover: number
-}
+/* ------------------------------ Recorrido ------------------------------ */
 
-/**
- * El ultimo alto de pantalla del track queda solapado por la seccion de los dos
- * bloques (margen negativo en CSS). Aqui se separa el progreso en "recorrido" y
- * "transicion" a partir de las medidas reales del DOM.
- */
-export function splitProgress(progress: number, stageHeight: number, scrollable: number): TravelPhases {
-  const cover = scrollable > stageHeight * 1.5 ? 1 - stageHeight / scrollable : 1
-  return {
-    travel: clamp(progress / cover),
-    tail: progressIn(cover, 1, progress),
-    cover,
-  }
-}
+/** Marcos LED que se atraviesan por segundo al caminar. */
+export const WALK_FRAMES_PER_SECOND = 1.35
+
+/** Pasos por cada tramo entre dos marcos: marca la cadencia del balanceo. */
+const STEPS_PER_FRAME = 1.5
+
+/** Altos de pantalla de rueda o arrastre que equivalen al tunel completo. */
+export const MANUAL_SCREENS: Record<TunnelOrientation, number> = { landscape: 3.5, portrait: 3 }
+
+/** Metros entre la posicion inicial de la camara y la final. */
+export const travelLength = (metrics: TunnelMetrics) => metrics.startZ - metrics.endZ
+
+/** Velocidad de paseo en m/s. */
+export const walkSpeed = (layout: TunnelLayout) => WALK_FRAMES_PER_SECOND * layout.spacing
+
+/** Ritmo de paseo como fraccion del recorrido por segundo. */
+export const walkCruise = (layout: TunnelLayout, metrics: TunnelMetrics) =>
+  walkSpeed(layout) / travelLength(metrics)
+
+/** 0 mientras se recorre el tunel, 1 al llegar: gobierna el encuadre final. */
+export const arrivalFactor = (travel: number) => EASINGS.smooth(progressIn(0.72, 1, clamp(travel)))
 
 export type CameraPose = {
   x: number
@@ -151,56 +155,69 @@ export type CameraPose = {
   distance: number
 }
 
-/** Metros que dura un "paso" del balanceo de camara. */
-const STRIDE = 7
-
 /**
- * Perfil de velocidad trapezoidal: la camara responde al primer gesto de
- * scroll, mantiene velocidad constante y frena con suavidad hasta detenerse
- * justo delante del escenario (velocidad cero al llegar).
- */
-const EASE_IN = 0.05
-const EASE_OUT = 0.24
-
-export function travelEase(travel: number): number {
-  const t = clamp(travel)
-  const cruise = 1 / (1 - (EASE_IN + EASE_OUT) / 2)
-  if (t < EASE_IN) return (cruise * t * t) / (2 * EASE_IN)
-  if (t > 1 - EASE_OUT) return 1 - (cruise * (1 - t) * (1 - t)) / (2 * EASE_OUT)
-  return cruise * (t - EASE_IN / 2)
-}
-
-/**
- * Pose de la camara para un punto del recorrido. Es funcion pura del progreso:
- * el balanceo depende de la distancia recorrida (no del tiempo), asi que el
- * camino de vuelta es identico al de ida. `motion` 0 desactiva el balanceo.
+ * Pose de la camara para un punto del recorrido. Es funcion pura de la
+ * posicion: el balanceo de los pasos depende de la distancia recorrida (no del
+ * tiempo), asi que al retroceder se deshace el mismo camino y al detenerse la
+ * camara se queda quieta. `motion` (0..1) atenua el balanceo: a velocidad de
+ * paseo vale 1; cuando el visitante avanza rapido baja a 0 y la camara planea.
  */
 export function cameraPose(
   layout: TunnelLayout,
   metrics: TunnelMetrics,
   travel: number,
-  tail = 0,
   motion = 1,
 ): CameraPose {
   const t = clamp(travel)
-  const z = lerp(metrics.startZ, metrics.endZ, travelEase(t)) - clamp(tail) * 0.9
+  const z = lerp(metrics.startZ, metrics.endZ, t)
   const distance = metrics.startZ - z
 
-  const stride = (distance / STRIDE) * Math.PI * 2
+  // Media vuelta por paso: la cabeza sube y baja una vez por paso y se mece
+  // de lado a lado una vez cada dos.
+  const step = (distance / (layout.spacing / STEPS_PER_FRAME)) * Math.PI
   // Al llegar al escenario la camara se asienta.
-  const settle = 1 - 0.85 * EASINGS.smooth(progressIn(0.84, 1, t))
+  const settle = 1 - EASINGS.smooth(progressIn(0.86, 1, t))
   const bob = motion * settle
 
-  const arrive = EASINGS.smooth(progressIn(0.72, 1, t))
-
   return {
-    x: Math.sin(stride * 0.5) * 0.06 * bob,
-    y: layout.eye + Math.sin(stride) * 0.035 * bob,
+    x: Math.sin(step) * 0.034 * bob,
+    y: layout.eye + Math.cos(step * 2) * 0.026 * bob,
     z,
     lookX: 0,
-    lookY: lerp(layout.eye * 0.96, metrics.focusY, arrive),
+    lookY: lerp(layout.eye * 0.96, metrics.focusY, arrivalFactor(t)),
     lookZ: z - 18,
-    roll: Math.sin(stride * 0.5) * 0.006 * bob,
+    roll: Math.sin(step) * 0.0045 * bob,
     distance,
   }
+}
+
+/**
+ * Px que hay que subir la imagen final (desplazamiento de lente, sin inclinar
+ * la camara) para que el escenario quede entero por encima de la franja
+ * inferior ocupada por los accesos. Se limita para no sacar por arriba el
+ * marco LED del fondo.
+ */
+export function stageLift(
+  layout: TunnelLayout,
+  metrics: TunnelMetrics,
+  fovDegrees: number,
+  viewportHeight: number,
+  clearBottom: number,
+): number {
+  const pitch = Math.atan2(metrics.focusY - layout.eye, 18)
+  const scale = 1 / Math.tan((fovDegrees * Math.PI) / 360)
+  // Altura en pantalla (px desde arriba) de un punto del eje del tunel.
+  const screenY = (y: number, z: number) => {
+    const dy = y - layout.eye
+    const forward = metrics.endZ - z
+    const depth = dy * Math.sin(pitch) + forward * Math.cos(pitch)
+    const height = dy * Math.cos(pitch) - forward * Math.sin(pitch)
+    return (viewportHeight / 2) * (1 - (height / depth) * scale)
+  }
+
+  const margin = viewportHeight * 0.03
+  const stageBottom = screenY(0, metrics.stage.z + metrics.stage.depth / 2)
+  const frameTop = screenY(layout.height - BACK_FRAME_INSET, metrics.backWallZ)
+  const wanted = stageBottom - (viewportHeight - clearBottom - margin)
+  return Math.max(0, Math.min(wanted, frameTop - margin))
 }

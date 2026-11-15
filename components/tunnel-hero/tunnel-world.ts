@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import {
+  BACK_FRAME_INSET,
   FRAME_COLORS,
   HAZE_COLOR,
   NEON,
@@ -266,7 +267,7 @@ function segmentList(layout: TunnelLayout, m: TunnelMetrics): Segment[] {
 
   // Pared del fondo: marco LED y barra de luz tras el futuro DJ set.
   const backZ = m.backWallZ + 0.16
-  const frameInset = 0.78
+  const frameInset = BACK_FRAME_INSET
   const violet = color(NEON.violet)
   const blue = color(NEON.blue)
   const magenta = color(NEON.magenta)

@@ -3,7 +3,7 @@
  *
  * La landing de IAM PROSOUND todavia no tiene URL definitiva, asi que no se
  * escribe ninguna en el codigo: se configura con la variable de entorno
- * `NEXT_PUBLIC_IAM_PROSOUND_URL`. Mientras este vacia, el bloque se muestra
+ * `NEXT_PUBLIC_IAM_PROSOUND_URL`. Mientras este vacia, el acceso se muestra
  * como "Proximamente" y no enlaza a ningun sitio.
  */
 
@@ -22,5 +22,5 @@ export function sanitizeLink(value: string | undefined | null): string | null {
 
 export const IAM_PROSOUND_URL = sanitizeLink(process.env.NEXT_PUBLIC_IAM_PROSOUND_URL)
 
-/** Ancla del contenido de John dentro de la pagina principal. */
-export const JOHNX_SECTION_ID = "dj-johnx"
+/** Ruta interna con todo el sitio de John (biografia, eventos, galeria...). */
+export const JOHNX_PATH = "/john"

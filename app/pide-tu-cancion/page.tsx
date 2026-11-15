@@ -14,7 +14,7 @@ export default function PideTuCancionPage() {
     <main className="min-h-screen bg-background px-4 py-10 text-foreground sm:py-16">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-block text-2xl font-black tracking-wider text-gradient-gold">
+          <Link href="/john" className="inline-block text-2xl font-black tracking-wider text-gradient-gold">
             DJ JOHNX
           </Link>
           <div className="mx-auto mt-6 flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-primary/10">

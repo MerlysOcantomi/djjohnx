@@ -1,12 +1,16 @@
 import { describe, it, expect } from "vitest"
 import {
+  MANUAL_SCREENS,
   TUNNEL_LAYOUTS,
+  arrivalFactor,
   cameraPose,
   fovFor,
   layoutFor,
-  splitProgress,
-  travelEase,
+  stageLift,
+  travelLength,
   tunnelMetrics,
+  walkCruise,
+  walkSpeed,
 } from "@/components/tunnel-hero/tunnel-config"
 import { sanitizeLink } from "@/lib/site-links"
 
@@ -17,53 +21,85 @@ describe("recorrido de camara del tunel", () => {
     const metrics = tunnelMetrics(layout)
     expect(cameraPose(layout, metrics, 0).z).toBeCloseTo(metrics.startZ)
     expect(cameraPose(layout, metrics, 1).z).toBeCloseTo(metrics.endZ)
-    // La camara nunca atraviesa la tarima ni la pared del fondo.
+    // La camara se detiene delante de la tarima, sin atravesarla.
     const stageFront = metrics.stage.z + metrics.stage.depth / 2
-    expect(cameraPose(layout, metrics, 1, 1).z).toBeGreaterThan(stageFront + 2)
+    expect(metrics.endZ).toBeGreaterThan(stageFront + 2)
   })
 
-  it.each(layouts)("%s: avanza siempre hacia delante al hacer scroll", (_, layout) => {
+  it.each(layouts)("%s: avanza de forma uniforme y atraviesa los marcos", (_, layout) => {
     const metrics = tunnelMetrics(layout)
+    const step = travelLength(metrics) / 200
     let previous = cameraPose(layout, metrics, 0).z
-    for (let step = 1; step <= 200; step++) {
-      const z = cameraPose(layout, metrics, step / 200).z
-      expect(z).toBeLessThan(previous)
+    for (let i = 1; i <= 200; i++) {
+      const z = cameraPose(layout, metrics, i / 200).z
+      expect(previous - z).toBeCloseTo(step, 6)
       previous = z
     }
+    // Se detiene bajo el ultimo marco, que hace de umbral del escenario.
+    expect(metrics.endZ).toBeLessThan(metrics.lastFrameZ + layout.spacing)
+    expect(metrics.endZ).toBeGreaterThan(metrics.lastFrameZ)
   })
 
-  it.each(layouts)("%s: es reversible (misma pose para el mismo progreso)", (_, layout) => {
+  it.each(layouts)("%s: es reversible (misma pose para la misma posicion)", (_, layout) => {
     const metrics = tunnelMetrics(layout)
     expect(cameraPose(layout, metrics, 0.37)).toEqual(cameraPose(layout, metrics, 0.37))
   })
 
-  it.each(layouts)("%s: la camara se mantiene dentro del tunel", (_, layout) => {
+  it.each(layouts)("%s: el balanceo de los pasos es sutil y se apaga al llegar", (_, layout) => {
     const metrics = tunnelMetrics(layout)
-    for (let step = 0; step <= 100; step++) {
-      const pose = cameraPose(layout, metrics, step / 100)
-      expect(Math.abs(pose.x)).toBeLessThan(layout.halfWidth * 0.1)
-      expect(Math.abs(pose.y - layout.eye)).toBeLessThan(0.05)
+    for (let i = 0; i <= 400; i++) {
+      const pose = cameraPose(layout, metrics, i / 400)
+      expect(Math.abs(pose.x)).toBeLessThan(0.05)
+      expect(Math.abs(pose.y - layout.eye)).toBeLessThan(0.04)
+      expect(Math.abs(pose.roll)).toBeLessThan(0.006)
     }
+    const end = cameraPose(layout, metrics, 1)
+    expect(end.x).toBeCloseTo(0, 10)
+    expect(end.y).toBeCloseTo(layout.eye, 10)
+    expect(end.roll).toBeCloseTo(0, 10)
   })
 
-  it("frena hasta detenerse al llegar al escenario, sin saltos de velocidad", () => {
-    expect(travelEase(0)).toBe(0)
-    expect(travelEase(1)).toBe(1)
-    const speed = (t: number) => (travelEase(t + 1e-4) - travelEase(t - 1e-4)) / 2e-4
-    expect(speed(0.9999)).toBeLessThan(0.01)
-    // Continuidad de la velocidad en las uniones de los tres tramos.
-    for (const joint of [0.05, 0.76]) {
-      expect(speed(joint - 1e-3)).toBeCloseTo(speed(joint + 1e-3), 1)
-    }
-  })
-
-  it("sin movimiento (motion = 0) no hay balanceo", () => {
+  it("sin balanceo (motion = 0) la camara planea", () => {
     const layout = TUNNEL_LAYOUTS.landscape
     const metrics = tunnelMetrics(layout)
-    const pose = cameraPose(layout, metrics, 0.4, 0, 0)
+    const pose = cameraPose(layout, metrics, 0.4, 0)
     expect(pose.x).toBeCloseTo(0, 10)
     expect(pose.y).toBeCloseTo(layout.eye, 10)
     expect(pose.roll).toBeCloseTo(0, 10)
+  })
+
+  it.each(layouts)("%s: el paseo va a ritmo de caminar entre marcos", (_, layout) => {
+    const metrics = tunnelMetrics(layout)
+    // Entre uno y dos marcos por segundo, y el tunel entero en 12-20 s.
+    expect(walkSpeed(layout) / layout.spacing).toBeGreaterThan(1)
+    expect(walkSpeed(layout) / layout.spacing).toBeLessThan(2)
+    const seconds = 1 / walkCruise(layout, metrics)
+    expect(seconds).toBeGreaterThan(12)
+    expect(seconds).toBeLessThan(20)
+  })
+})
+
+describe("encuadre final", () => {
+  it("solo actua al acercarse al escenario", () => {
+    expect(arrivalFactor(0)).toBe(0)
+    expect(arrivalFactor(0.5)).toBe(0)
+    expect(arrivalFactor(1)).toBe(1)
+  })
+
+  it.each([
+    ["escritorio", 1440, 810, 190],
+    ["portatil bajo", 1280, 600, 150],
+    ["movil vertical", 390, 844, 215],
+    ["movil apaisado", 844, 390, 120],
+  ])("%s: sube la imagen para dejar el escenario sobre los accesos", (_, width, height, dock) => {
+    const layout = TUNNEL_LAYOUTS[layoutFor(width, height)]
+    const metrics = tunnelMetrics(layout)
+    const lift = stageLift(layout, metrics, fovFor(width, height), height, dock)
+    expect(lift).toBeGreaterThanOrEqual(0)
+    // Nunca desplaza mas de un cuarto de pantalla.
+    expect(lift).toBeLessThan(height * 0.25)
+    // Sin franja inferior no hace falta mover nada.
+    expect(stageLift(layout, metrics, fovFor(width, height), height, 0)).toBe(0)
   })
 })
 
@@ -90,22 +126,10 @@ describe("geometria del tunel", () => {
     expect(fovFor(390, 844)).toBeGreaterThan(fovFor(1440, 900))
     expect(fovFor(1024, 768)).toBeGreaterThan(fovFor(1920, 1080))
   })
-})
 
-describe("fases del scroll", () => {
-  it("reserva el ultimo alto de pantalla para la transicion a los bloques", () => {
-    // Track de 5.5 pantallas: 4.5 de scroll, la ultima es la transicion.
-    const stage = 800
-    const scrollable = 4.5 * stage
-    expect(splitProgress(0, stage, scrollable)).toMatchObject({ travel: 0, tail: 0 })
-    const arrival = splitProgress(3.5 / 4.5, stage, scrollable)
-    expect(arrival.travel).toBeCloseTo(1)
-    expect(arrival.tail).toBeCloseTo(0)
-    expect(splitProgress(1, stage, scrollable)).toMatchObject({ travel: 1, tail: 1 })
-  })
-
-  it("sin track largo (version fija) no hay recorrido ni transicion", () => {
-    expect(splitProgress(0, 800, 0)).toMatchObject({ travel: 0, tail: 0 })
+  it("el control manual recorre el tunel en unas pocas pantallas", () => {
+    expect(MANUAL_SCREENS.landscape).toBeGreaterThan(2)
+    expect(MANUAL_SCREENS.portrait).toBeGreaterThan(2)
   })
 })
 

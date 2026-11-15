@@ -3,14 +3,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
-import type { SequenceStore } from "@/components/cinematic/sequence-context"
-import { clamp, damp } from "@/lib/cinematic/math"
+import type { JourneyController } from "@/components/cinematic/sequence-context"
+import { clamp, damp, progressIn } from "@/lib/cinematic/math"
 import {
   TUNNEL_LAYOUTS,
+  arrivalFactor,
   cameraPose,
   fovFor,
   layoutFor,
-  splitProgress,
+  stageLift,
+  travelLength,
+  walkSpeed,
 } from "./tunnel-config"
 import { createTunnelWorld, type TunnelDetail } from "./tunnel-world"
 
@@ -50,8 +53,17 @@ const SAMPLE_MS = 1000
 /** El reflejo nunca supera este ancho: es una textura borrosa por diseno. */
 const REFLECTION_MAX_WIDTH = 1024
 
+export type TunnelStats = {
+  fps: number
+  dpr: number
+  width: number
+  height: number
+  progress: number
+}
+
 type SceneProps = {
-  store: SequenceStore
+  /** Recorrido que la escena hace avanzar en cada fotograma. */
+  journey: JourneyController
   tier: TunnelTier
   /** Contenido 3D del DJ set. Se monta sobre la tarima del final del tunel. */
   djSet?: ReactNode
@@ -144,6 +156,33 @@ function AdaptiveResolution({
   return null
 }
 
+/** Medidor para revisar el rendimiento en un dispositivo real (`?fps=1`). */
+function StatsProbe({ journey, onStats }: { journey: JourneyController; onStats: (stats: TunnelStats) => void }) {
+  const gl = useThree((state) => state.gl)
+  const sample = useRef({ start: 0, frames: 0 })
+  const buffer = useMemo(() => new THREE.Vector2(), [])
+
+  useFrame(() => {
+    const now = performance.now()
+    const s = sample.current
+    if (!s.start) s.start = now
+    s.frames++
+    if (now - s.start < 500) return
+    gl.getDrawingBufferSize(buffer)
+    onStats({
+      fps: (s.frames * 1000) / (now - s.start),
+      dpr: gl.getPixelRatio(),
+      width: buffer.x,
+      height: buffer.y,
+      progress: journey.getFrame().progress,
+    })
+    s.start = now
+    s.frames = 0
+  })
+
+  return null
+}
+
 function DjSetGuide({ size }: { size: readonly [number, number, number] }) {
   const [width, height, depth] = size
   const volume = useMemo(
@@ -168,7 +207,7 @@ function DjSetGuide({ size }: { size: readonly [number, number, number] }) {
   )
 }
 
-function TunnelScene({ store, tier, djSet, showGuide, onReady }: SceneProps) {
+function TunnelScene({ journey, tier, djSet, showGuide, onReady }: SceneProps) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera
@@ -199,7 +238,7 @@ function TunnelScene({ store, tier, djSet, showGuide, onReady }: SceneProps) {
 
   const mirrored = useRef<THREE.Group>(null)
   const pointer = usePointerParallax()
-  const rig = useRef({ time: 0, lastZ: Number.NaN, kick: 0, px: 0, py: 0, frames: 0, ready: false })
+  const rig = useRef({ time: 0, kick: 0, bob: 1, lift: -1, viewWidth: 0, viewHeight: 0, px: 0, py: 0, frames: 0, ready: false })
   const scratch = useMemo(() => ({ buffer: new THREE.Vector2(), look: new THREE.Vector3() }), [])
 
   useFrame((_, rawDelta) => {
@@ -207,14 +246,20 @@ function TunnelScene({ store, tier, djSet, showGuide, onReady }: SceneProps) {
     const state = rig.current
     state.time += dt
 
-    const frame = store.getFrame()
-    const phases = splitProgress(frame.progress, frame.height, frame.scrollable)
-    const pose = cameraPose(world.layout, world.metrics, phases.travel, phases.tail)
+    // El recorrido avanza con el mismo reloj que el render: camara e imagen
+    // van siempre en el mismo fotograma, y si el lienzo se detiene (pestana
+    // oculta) el paseo se queda en pausa.
+    const frame = journey.advance(dt)
+    const travel = frame.progress
+    const speed = Math.abs(frame.speed) * travelLength(world.metrics)
+    const walk = walkSpeed(world.layout)
+
+    // A ritmo de paseo la camara "pisa"; si el visitante acelera, planea.
+    state.bob = damp(state.bob, 1 - progressIn(walk * 1.7, walk * 3.6, speed), 4, dt)
+    const pose = cameraPose(world.layout, world.metrics, travel, state.bob)
 
     // Empuje de campo de vision con la velocidad: sensacion de avance.
-    const speed = Number.isNaN(state.lastZ) ? 0 : Math.abs(pose.z - state.lastZ) / Math.max(dt, 1e-3)
-    state.lastZ = pose.z
-    state.kick = damp(state.kick, clamp(speed / 70) * 7, 5, dt)
+    state.kick = damp(state.kick, clamp((speed - walk * 1.5) / 70) * 7, 5, dt)
     state.px = damp(state.px, pointer.current.x, 3, dt)
     state.py = damp(state.py, pointer.current.y, 3, dt)
 
@@ -229,10 +274,23 @@ function TunnelScene({ store, tier, djSet, showGuide, onReady }: SceneProps) {
     camera.lookAt(scratch.look)
     camera.rotateZ(pose.roll)
 
-    const fov = fovFor(size.width, size.height) + state.kick
-    if (Math.abs(camera.fov - fov) > 0.01) {
+    const baseFov = fovFor(size.width, size.height)
+    const fov = baseFov + state.kick
+    // Al llegar, la imagen sube lo justo para que el escenario quede por
+    // encima de los accesos (desplazamiento de lente: no inclina las lineas).
+    const lift =
+      arrivalFactor(travel) * stageLift(world.layout, world.metrics, baseFov, size.height, frame.clearBottom)
+    if (
+      Math.abs(lift - state.lift) > 0.2 ||
+      state.viewWidth !== size.width ||
+      state.viewHeight !== size.height ||
+      Math.abs(camera.fov - fov) > 0.01
+    ) {
+      state.lift = lift
+      state.viewWidth = size.width
+      state.viewHeight = size.height
       camera.fov = fov
-      camera.updateProjectionMatrix()
+      camera.setViewOffset(size.width, size.height, 0, lift, size.width, size.height)
     }
 
     gl.getDrawingBufferSize(scratch.buffer)
@@ -290,13 +348,14 @@ function TunnelScene({ store, tier, djSet, showGuide, onReady }: SceneProps) {
 }
 
 export type TunnelCanvasProps = SceneProps & {
-  /** false = bucle de render detenido (hero fuera de pantalla o pestana oculta). */
+  /** false = bucle de render detenido (pestana oculta): el recorrido se pausa. */
   active: boolean
   /** Fija la resolucion y desactiva el ajuste automatico (capturas y pruebas). */
   fixedDpr?: number
+  onStats?: (stats: TunnelStats) => void
 }
 
-export default function TunnelCanvas({ active, fixedDpr, tier, ...scene }: TunnelCanvasProps) {
+export default function TunnelCanvas({ active, fixedDpr, tier, onStats, ...scene }: TunnelCanvasProps) {
   const settings = TIERS[tier]
   // Nunca se renderiza por encima de la densidad real de la pantalla.
   const [limits] = useState(() => {
@@ -321,6 +380,7 @@ export default function TunnelCanvas({ active, fixedDpr, tier, ...scene }: Tunne
       {fixedDpr === undefined ? (
         <AdaptiveResolution dpr={dpr} min={limits.min} max={limits.max} onChange={setDpr} />
       ) : null}
+      {onStats ? <StatsProbe journey={scene.journey} onStats={onStats} /> : null}
       <TunnelScene tier={tier} {...scene} />
     </Canvas>
   )

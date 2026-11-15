@@ -28,7 +28,8 @@ Todo el interfaz está en español y el formato regional es `es-ES` con moneda E
 
 ```
 app/
-  page.tsx                 Página pública
+  page.tsx                 Home: túnel de entrada y los dos accesos
+  john/page.tsx            Sitio público de DJ JOHNX
   layout.tsx               Metadatos, SEO y fuentes
   sitemap.ts / robots.ts   SEO (excluyen /admin)
   actions/                 Server Actions (todas verifican sesión)
@@ -37,9 +38,8 @@ app/
     (panel)/               Panel protegido
   api/admin/blob-upload/   Emisión de token de subida a Blob
 components/                Secciones públicas y pantallas de admin
-  cinematic/               Motor de scroll (track + stage sticky + progreso 0..1)
-  tunnel-hero/             Portada: túnel 3D que se recorre con el scroll
-  iam-gateway.tsx          Bloques IAM DJ JOHNX / IAM PROSOUND
+  cinematic/               Escenario del recorrido (rueda, dedo y teclado mueven la cámara)
+  tunnel-hero/             Home: túnel 3D y accesos IAM DJ JOHNX / IAM PROSOUND
 lib/
   db.ts                    Cliente Neon (solo servidor)
   session.ts               Token de sesión firmado (compatible con Edge)
@@ -70,44 +70,65 @@ consultas parametrizadas; no se concatena nunca entrada del usuario en el SQL.
 
 ---
 
-## Portada: el túnel
+## Home: el túnel de entrada
 
-La portada es una escena 3D real (three.js con React Three Fiber), no un vídeo
-ni una foto con zoom: la cámara avanza por un túnel rectangular de LED al hacer
-scroll y, al llegar al final, suben los dos bloques **IAM DJ JOHNX — ENTER** e
-**IAM PROSOUND — DISCOVER**.
+La Home (`/`) es solo una pantalla: una escena 3D real (three.js con React Three
+Fiber) en la que la cámara camina por un túnel rectangular de LED hasta el
+escenario del fondo. No hay cabecera, textos ni reproductor. Al llegar aparecen
+los dos accesos:
+
+- **IAM DJ JOHNX — ENTER** lleva a `/john`, donde está todo el sitio de John
+  (portada, biografía, eventos, servicios, galería, vídeo, contacto y música) tal
+  como estaba antes en la raíz. El panel de administración sigue editando ese
+  contenido.
+- **IAM PROSOUND — DISCOVER** lleva a la landing de IAM PROSOUND. Su URL se
+  define en `NEXT_PUBLIC_IAM_PROSOUND_URL`; mientras esté vacía, el acceso se
+  muestra como "Próximamente" y no enlaza a ningún sitio.
+
+**Movimiento.** La cámara empieza a andar sola al abrir la página y se detiene
+suavemente delante del escenario. La página no se desplaza: la rueda, el dedo
+(arrastre vertical) y el teclado (flechas, Re Pág/Av Pág, Inicio/Fin) mueven la
+cámara directamente. Mientras el visitante interactúa manda él; tras un breve
+reposo el paseo se reanuda. Automático y manual actúan sobre una única posición
+seguida por un muelle amortiguado, así que no hay saltos de posición ni tirones
+de velocidad al pasar de uno a otro. Con la pestaña oculta todo queda en pausa.
+No se reproduce ningún sonido.
 
 | Archivo | Qué hace |
 |---|---|
-| `components/cinematic/scroll-sequence.tsx` | Motor de scroll (mismos principios que el `ScrollSequence` de DJ-Canet): track largo, stage `sticky`, progreso 0..1 amortiguado |
-| `components/tunnel-hero/tunnel-config.ts` | Dimensiones, paleta, recorrido de cámara y punto del DJ set. Funciones puras, con pruebas |
+| `lib/cinematic/journey.ts` | Motor del recorrido: avance automático, control manual, inercia y "saltar". Lógica pura, con pruebas |
+| `components/cinematic/journey-stage.tsx` | Escenario a pantalla completa: traduce rueda, dedo y teclado en movimiento de cámara |
+| `components/tunnel-hero/tunnel-config.ts` | Dimensiones, paleta, ritmo de paseo, pose de cámara y punto del DJ set. Funciones puras, con pruebas |
 | `components/tunnel-hero/tunnel-world.ts` | Geometría: marcos LED, tiras de suelo, humo, polvo, tarima |
 | `components/tunnel-hero/tunnel-shaders.ts` | Iluminación analítica, halos de neón y suelo mojado reflectante |
 | `components/tunnel-hero/tunnel-canvas.tsx` | Lienzo WebGL, cámara, reflejo del suelo y resolución adaptativa |
-| `components/tunnel-hero/tunnel-hero.tsx` | Título, versión fija, "Saltar intro" y elección de modo |
-| `components/iam-gateway.tsx` | Los dos bloques |
+| `components/tunnel-hero/tunnel-accesses.tsx` | Los dos accesos |
+| `components/tunnel-hero/tunnel-home.tsx` | Elección de modo, versión fija y botón "Saltar" |
 
 **Rendimiento.** Sin luces en tiempo real ni postprocesado; unas 10 llamadas de
-dibujo. La resolución se ajusta sola para mantener la fluidez, el render se
-detiene cuando la portada no está en pantalla y three.js solo se descarga si el
-túnel va a animarse.
+dibujo. La resolución baja sola si el dispositivo no llega a ~45 fps, y three.js
+solo se descarga si el túnel va a animarse.
 
 **Accesibilidad.** Con "reducir movimiento" activado, o sin WebGL, se muestra una
-imagen fija del túnel (`public/tunnel/poster-*.webp`) y los bloques quedan justo
-debajo, sin recorrido. Quien quiera puede activar el 3D con un botón. El enlace
-"Saltar intro" lleva directamente a los bloques.
+imagen fija del túnel (`public/tunnel/poster-*.webp`) con los accesos visibles
+desde el principio; quien quiera puede activar el recorrido con un botón. El
+botón "Saltar" lleva la cámara al final, y enfocar un acceso con el teclado hace
+lo mismo.
 
 **DJ set.** El final del túnel es un escenario preparado (tarima, marco LED y
 contraluz) todavía vacío. El material de John se monta pasando un nodo 3D a la
-prop `djSet` de `<TunnelHero>`; su posición y volumen reservado están en
-`tunnelMetrics().djSet`.
+prop `djSet` de `<TunnelHome>`; su posición y volumen reservado están en
+`tunnelMetrics().djSet`. Los accesos ocupan la franja inferior y la cámara
+encuadra el escenario por encima de ellos.
 
 Parámetros de revisión en la URL:
 
 | Parámetro | Efecto |
 |---|---|
+| `?fps=1` | Muestra fps, resolución y nivel de calidad (para probar en un móvil real) |
 | `?tunnel=static` | Fuerza la versión fija |
 | `?tunnel=live` | Fuerza el túnel 3D |
+| `?auto=0` | Desactiva el avance automático (solo control manual) |
 | `?djset=guia` | Dibuja el volumen reservado para el DJ set |
 | `?dpr=1.5` | Fija la resolución de render |
 
@@ -152,7 +173,7 @@ http://localhost:3000/admin.
 | `ADMIN_PASSWORD` | **Privada** | Contraseña del panel |
 | `SESSION_SECRET` | **Privada** | Firma HMAC de la cookie de sesión |
 | `NEXT_PUBLIC_APP_URL` | Pública | Dominio canónico (`https://djjohnx.com`) |
-| `NEXT_PUBLIC_IAM_PROSOUND_URL` | Pública | Landing de IAM PROSOUND. Vacía = bloque "Próximamente" sin enlace |
+| `NEXT_PUBLIC_IAM_PROSOUND_URL` | Pública | Landing de IAM PROSOUND. Vacía = acceso "Próximamente" sin enlace |
 
 Reglas:
 

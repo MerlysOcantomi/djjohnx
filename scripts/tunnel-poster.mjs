@@ -42,7 +42,8 @@ try {
       deviceScaleFactor: shot.scale,
     })
     const page = await context.newPage()
-    await page.goto(`${base}/?tunnel=live&dpr=${shot.scale}`, { waitUntil: "domcontentloaded" })
+    // auto=0: la camara se queda en la posicion inicial en vez de echar a andar.
+    await page.goto(`${base}/?tunnel=live&auto=0&dpr=${shot.scale}`, { waitUntil: "domcontentloaded" })
     await page.addStyleTag({ content: HIDE_UI })
     await page.waitForSelector(".cine-stage canvas", { timeout: 60_000 })
     await page.waitForTimeout(6000)
