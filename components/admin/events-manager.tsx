@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Loader2, MapPin, CalendarDays } from "lucide-react"
+import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Loader2, MapPin, CalendarDays, WandSparkles } from "lucide-react"
 import { toast } from "sonner"
 
 type Draft = {
