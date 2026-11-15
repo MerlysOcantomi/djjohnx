@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Play, MessageCircle } from "lucide-react"
-import { FloatingNotes } from "@/components/floating-notes"
 
 type HeroData = {
   backgroundImage?: string
@@ -23,7 +22,7 @@ export function Hero({ data }: { data?: HeroData }) {
   return (
     <section
       id="inicio"
-      className="relative flex min-h-[120vh] items-center justify-center overflow-hidden"
+      className="relative flex min-h-[100svh] items-center justify-center overflow-hidden md:min-h-[105vh]"
     >
       {/* Background Image - Full Screen */}
       <div
@@ -37,12 +36,13 @@ export function Hero({ data }: { data?: HeroData }) {
       {/* Light gradient overlay - only at bottom for text readability */}
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/80 to-transparent" />
       
-      {/* Floating Musical Notes */}
-      <FloatingNotes />
+      {/* La fotografia del DJ sigue siendo protagonista; sin adornos flotantes. */}
 
       {/* Content - Positioned at bottom */}
       <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-center px-4 pt-32 pb-24 text-center mt-auto">
 
+        {/* Identidad de la familia IAM PROSOUND */}
+        <p className="mb-4 text-xs font-bold uppercase tracking-[0.65em] text-sky-300 md:text-sm">I AM</p>
         {/* Main Title */}
         <h1 className="mb-4 text-6xl font-black uppercase tracking-tight sm:text-7xl md:text-8xl lg:text-9xl drop-shadow-2xl">
           <span className="text-gradient-gold">{title}</span>
@@ -62,7 +62,7 @@ export function Hero({ data }: { data?: HeroData }) {
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button
             size="lg"
-            className="group bg-primary px-8 py-6 text-lg font-bold uppercase tracking-wide text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105 glow-gold"
+            className="group bg-primary px-8 py-6 text-lg font-bold uppercase tracking-wide text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105"
             asChild
           >
             <a href="#eventos">
