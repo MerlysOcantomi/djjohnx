@@ -70,18 +70,8 @@ export async function POST(request: Request) {
     const item = result.data?.[0]
     if (item?.b64_json && item.b64_json.length < 18_000_000)
       return NextResponse.json({ image: "data:image/png;base64," + item.b64_json }, { headers: { "Cache-Control": "no-store" } })
-    // URLs remotas pueden requerir autenticacion o no permitir uso en canvas;
-    // se descargan desde el servidor y se entregan como data URI a nuestro editor.
-    if (item?.url) {
-      const url = new URL(item.url)
-      if (url.protocol !== "https:") return fail("Imagen generada no disponible", 502)
-      const imageResponse = await fetch(url.toString(), { signal: AbortSignal.timeout(15_000) })
-      const type = imageResponse.headers.get("content-type") || ""
-      if (!imageResponse.ok || !type.startsWith("image/")) return fail("No se pudo recuperar la imagen", 502)
-      const bytes = Buffer.from(await imageResponse.arrayBuffer())
-      if (bytes.length > 12_000_000) return fail("Imagen demasiado grande", 502)
-      return NextResponse.json({ image: "data:" + type.split(";")[0] + ";base64," + bytes.toString("base64") }, { headers: { "Cache-Control": "no-store" } })
-    }
+    // Solo admitir datos base64 que llegan directamente del proveedor.
+    // No descargar URLs arbitrarias devueltas por una respuesta externa.
     return fail("Este modelo no devolvió una imagen compatible. Prueba otro modelo en POSTER_IMAGE_MODEL.", 502)
   } catch {
     return fail("No se pudo completar la generación. Inténtalo de nuevo.", 502)
