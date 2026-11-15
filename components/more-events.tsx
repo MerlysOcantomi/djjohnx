@@ -35,14 +35,14 @@ export function MoreEvents({ data }: { data?: PublicEvent[] }) {
             key={e.id}
             className="group glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:glow-gold"
           >
-            <div className="relative aspect-[4/3] min-h-[300px] overflow-hidden bg-muted/30 sm:min-h-[360px]">
+            <div className="relative aspect-[4/5] overflow-hidden bg-[#080c19] sm:aspect-[3/4]">
               {e.image ? (
                 <Image
                   src={e.image}
                   alt={e.title}
                   fill
                   sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  className="object-contain p-2 sm:p-3"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
@@ -50,7 +50,7 @@ export function MoreEvents({ data }: { data?: PublicEvent[] }) {
                 </div>
               )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
+              
               <div className="absolute left-5 top-5 rounded-full border border-primary/30 bg-background/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
                 Próxima fecha
               </div>
