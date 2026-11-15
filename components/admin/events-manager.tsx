@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import type { EventRow } from "@/lib/data"
 import {
   saveEvent,
@@ -126,10 +127,10 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRow[] }) 
 
   return (
     <div className="space-y-4">
-      <Button onClick={openNew}>
-        <Plus className="mr-2 h-4 w-4" />
-        Nuevo evento
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nuevo evento</Button>
+        <Button asChild variant="outline"><Link href="/admin/carteles"><WandSparkles className="mr-2 h-4 w-4" />Crear cartel</Link></Button>
+      </div>
 
       {events.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aun no hay eventos.</p>
@@ -219,7 +220,8 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRow[] }) 
                 <Label>Enlace de entradas</Label>
                 <Input value={draft.ticketsLink} onChange={(ev) => setDraft({ ...draft, ticketsLink: ev.target.value })} />
               </div>
-              <ImageUpload label="Imagen" value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
+              <ImageUpload label="Cartel del evento" aspect="aspect-[4/5]" fit="contain" value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
+              <Link className="inline-flex items-center gap-2 text-sm text-primary underline-offset-4 hover:underline" href={"/admin/carteles" + (draft.id ? "?evento=" + draft.id : "")}><WandSparkles className="h-4 w-4" /> Diseñar cartel en el estudio</Link>
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <Label>Publicado</Label>
                 <Switch checked={draft.isPublished} onCheckedChange={(v) => setDraft({ ...draft, isPublished: v })} />
