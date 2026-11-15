@@ -45,7 +45,7 @@ export function Navbar() {
               alt="JOHNX DJ Logo"
               width={48}
               height={48}
-              className="h-10 w-10 object-contain md:h-12 md:w-12"
+              className="h-10 w-10 bg-transparent object-contain mix-blend-screen md:h-12 md:w-12"
             />
             <span className="text-xl font-black tracking-wider text-white md:text-2xl">
               DJ JOHNX
@@ -91,7 +91,7 @@ export function Navbar() {
                       alt="JOHNX DJ Logo"
                       width={40}
                       height={40}
-                      className="h-10 w-10 object-contain"
+                      className="h-10 w-10 bg-transparent object-contain mix-blend-screen"
                     />
                     <span className="text-2xl font-black tracking-wider text-white">
                       DJ JOHNX
