@@ -572,3 +572,61 @@ a.tunnel-access:active {
     display: none !important;
   }
 }
+
+
+/* =============================================================
+ * DJ JOHNX · Family design system
+ * Scope only to the artist's public /john page. The cinematic
+ * tunnel and the protected admin retain their existing appearance.
+ * Keep tokens compatible with the PROSOUND landing.
+ * ============================================================= */
+.john-prosound {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: #111111;
+  --muted: #1c1c1c;
+  --primary: #2f80ed;
+  --primary-foreground: #ffffff;
+  --secondary: #a855f7;
+  --secondary-foreground: #ffffff;
+  --accent: #60a5fa;
+  --accent-foreground: #07111f;
+  --border: #222222;
+  --ring: #2f80ed;
+  color: #fff;
+  background: #0a0a0a;
+}
+.john-prosound .text-gradient-gold {
+  background: linear-gradient(110deg, #fff 0%, #d9e8ff 55%, #78b6ff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.john-prosound .glow-gold {
+  box-shadow: 0 0 28px rgba(47,128,237,.2);
+}
+.john-prosound .glass {
+  background: rgba(5,8,17,.76);
+  border-color: rgba(255,255,255,.10);
+  backdrop-filter: blur(20px);
+}
+.john-prosound .glass-card {
+  background: linear-gradient(145deg, rgba(18,27,47,.77),rgba(7,9,17,.92));
+  border-color: rgba(255,255,255,.12);
+}
+.john-prosound .text-gradient-violet {
+  background: linear-gradient(115deg, #60a5fa, #a855f7);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.john-prosound section[id] {
+  scroll-margin-top: 5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .john-prosound .animate-float,
+  .john-prosound .animate-pulse-glow,
+  .john-prosound .animate-marquee {
+    animation: none;
+  }
+}
