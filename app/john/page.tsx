@@ -40,7 +40,7 @@ export default async function JohnPage() {
   return (
     // overflow-x-clip: los adornos de 500px de algunas secciones provocaban
     // scroll lateral en movil.
-    <main className="min-h-screen overflow-x-clip bg-background">
+    <main className="john-prosound min-h-screen overflow-x-clip bg-background">
       {/* Navigation */}
       <Navbar />
 
