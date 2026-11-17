@@ -208,6 +208,329 @@
   }
 }
 
+/* ===== Home: tunel de entrada ===== */
+/*
+ * La Home es una sola pantalla: el tunel no se recorre desplazando la pagina,
+ * sino que la rueda, el dedo y el teclado mueven la camara. Por eso no hay
+ * scroll ni rebote al arrastrar.
+ */
+html:has(.tunnel-home) {
+  overscroll-behavior: none;
+}
+
+.tunnel-home {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #05030d;
+}
+
+.cine-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #05030d;
+  isolation: isolate;
+  /* El arrastre vertical lo interpreta el recorrido, no el navegador. */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tunnel-vignette {
+  background: radial-gradient(120% 90% at 50% 45%, transparent 58%, rgba(3, 2, 10, 0.62) 100%);
+}
+
+/* Unico control visible durante el paseo. */
+.tunnel-skip {
+  position: absolute;
+  right: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  transition: color 0.25s ease;
+}
+
+.tunnel-skip:hover {
+  color: #fff;
+}
+
+.tunnel-skip:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  color: #fff;
+}
+
+.tunnel-home:not([data-mode="live"]) .tunnel-skip {
+  display: none;
+}
+
+/* Version fija por "reducir movimiento": opcion de ver el recorrido. */
+.tunnel-optin {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.6rem 0.95rem;
+  background: rgba(5, 3, 13, 0.55);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.tunnel-optin:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+.tunnel-optin:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ===== Accesos IAM DJ JOHNX / IAM PROSOUND ===== */
+.tunnel-accesses {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 30;
+  display: grid;
+  gap: 0.625rem;
+  padding: 0 0.875rem max(0.875rem, env(safe-area-inset-bottom));
+  opacity: 0;
+  transform: translate3d(0, 1.75rem, 0);
+  pointer-events: none;
+  transition:
+    opacity 0.7s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Al llegar al escenario, o desde el principio en la version fija. */
+.tunnel-accesses[data-open],
+.tunnel-home[data-mode="static"] .tunnel-accesses {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/*
+ * Red de seguridad: si el JavaScript tarda o no llega a arrancar, los accesos
+ * aparecen igualmente sobre la imagen fija. En cuanto la pagina arranca
+ * (data-mode), deja de aplicarse.
+ */
+.tunnel-home:not([data-mode]) .tunnel-accesses {
+  animation: tunnel-accesses-fallback 0.6s ease 7s forwards;
+}
+
+@keyframes tunnel-accesses-fallback {
+  to {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+
+.tunnel-access {
+  --tone: #ff45d2;
+  --tone-2: #9b5cff;
+  --tone-soft: #ffb3ee;
+  position: relative;
+  display: flex;
+  min-height: 5.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1.1rem;
+  padding: 1rem 1rem 1rem 1.2rem;
+  background: linear-gradient(180deg, rgba(15, 12, 32, 0.84) 0%, rgba(7, 5, 18, 0.94) 100%);
+  color: #fff;
+  text-decoration: none;
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tunnel-access[data-tone="prosound"] {
+  --tone: #2ccaff;
+  --tone-2: #4a74ff;
+  --tone-soft: #b4ecff;
+}
+
+/* Linea de color: la unica seña de identidad de cada acceso. */
+.tunnel-access::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--tone) 0%, var(--tone-2) 60%, transparent 100%);
+  transform: scaleX(0.5);
+  transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tunnel-access__label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tunnel-access__iam {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  color: var(--tone-soft);
+}
+
+.tunnel-access__name {
+  font-size: clamp(1.65rem, 7.6vw, 2.3rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tunnel-access__cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tunnel-access__arrow {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tunnel-access[data-pending] .tunnel-access__cta {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tunnel-access__soon {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+a.tunnel-access:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+a.tunnel-access:active {
+  transform: scale(0.985);
+}
+
+@media (hover: hover) {
+  a.tunnel-access:hover {
+    border-color: rgba(255, 255, 255, 0.36);
+    background-color: rgba(26, 20, 52, 0.5);
+    transform: translateY(-3px);
+  }
+
+  a.tunnel-access:hover::before {
+    transform: scaleX(1);
+  }
+
+  a.tunnel-access:hover .tunnel-access__arrow {
+    border-color: transparent;
+    background-color: var(--tone);
+    color: #07051a;
+    transform: translateX(4px);
+  }
+}
+
+@media (min-width: 640px) {
+  .tunnel-skip {
+    right: 1.5rem;
+    bottom: 1.5rem;
+  }
+
+  .tunnel-accesses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 0 clamp(1.25rem, 4vw, 3.5rem) clamp(1.1rem, 3.4vh, 2.25rem);
+  }
+
+  .tunnel-access {
+    min-height: clamp(6.25rem, 18vh, 10.5rem);
+    padding: 1.25rem clamp(1.1rem, 2vw, 1.9rem) 1.25rem clamp(1.3rem, 2.4vw, 2.2rem);
+  }
+
+  .tunnel-access__iam {
+    font-size: clamp(0.7rem, 0.95vw, 0.86rem);
+  }
+
+  .tunnel-access__name {
+    font-size: clamp(1.9rem, 4.1vw, 3.75rem);
+  }
+
+  .tunnel-access__cta {
+    gap: clamp(0.7rem, 1.2vw, 1.1rem);
+    font-size: clamp(0.68rem, 0.85vw, 0.8rem);
+  }
+
+  .tunnel-access__arrow {
+    width: clamp(2.6rem, 4vw, 3.5rem);
+    height: clamp(2.6rem, 4vw, 3.5rem);
+  }
+
+  .tunnel-access__soon {
+    font-size: 0.62rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tunnel-accesses,
+  .tunnel-access,
+  .tunnel-access::before,
+  .tunnel-access__arrow {
+    transition: none;
+  }
+
+  a.tunnel-access:hover,
+  a.tunnel-access:hover .tunnel-access__arrow {
+    transform: none;
+  }
+}
+
 /* ===== Factura A4 ===== */
 .invoice-sheet {
   width: 210mm;
@@ -248,4 +571,146 @@
   .print\:hidden {
     display: none !important;
   }
+}
+
+
+/* =============================================================
+ * DJ JOHNX · Family design system
+ * Scope only to the artist's public /john page. The cinematic
+ * tunnel and the protected admin retain their existing appearance.
+ * Keep tokens compatible with the PROSOUND landing.
+ * ============================================================= */
+.john-prosound {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: #111111;
+  --muted: #1c1c1c;
+  --primary: #2f80ed;
+  --primary-foreground: #ffffff;
+  --secondary: #a855f7;
+  --secondary-foreground: #ffffff;
+  --accent: #60a5fa;
+  --accent-foreground: #07111f;
+  --border: #222222;
+  --ring: #2f80ed;
+  color: #fff;
+  background: #0a0a0a;
+}
+.john-prosound .text-gradient-gold {
+  background: linear-gradient(110deg, #fff 0%, #d9e8ff 55%, #78b6ff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.john-prosound .glow-gold {
+  box-shadow: 0 0 28px rgba(47,128,237,.2);
+}
+.john-prosound .glass {
+  background: rgba(5,8,17,.76);
+  border-color: rgba(255,255,255,.10);
+  backdrop-filter: blur(20px);
+}
+.john-prosound .glass-card {
+  background: linear-gradient(145deg, rgba(18,27,47,.77),rgba(7,9,17,.92));
+  border-color: rgba(255,255,255,.12);
+}
+.john-prosound .text-gradient-violet {
+  background: linear-gradient(115deg, #60a5fa, #a855f7);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.john-prosound section[id] {
+  scroll-margin-top: 5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .john-prosound .animate-float,
+  .john-prosound .animate-pulse-glow,
+  .john-prosound .animate-marquee {
+    animation: none;
+  }
+}
+
+
+/* === Final cinematografico: logos IAM sin tarjetas ni botones === */
+.tunnel-logo-accesses {
+  /* Dos identidades juntas en todos los tamaños, sin cubrir el escenario. */
+  width: min(100%, 780px);
+  margin-inline: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  justify-items: center;
+  gap: clamp(.5rem, 2.5vw, 1.8rem);
+  padding: 0 clamp(.6rem, 2.5vw, 1.5rem) max(.65rem, env(safe-area-inset-bottom));
+}
+
+.tunnel-brand-link {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  max-width: 330px;
+  height: clamp(82px, 14vh, 160px);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  outline-offset: 3px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .45s cubic-bezier(.22,.61,.36,1), filter .45s ease;
+}
+.tunnel-brand-link__image {
+  display: block;
+  width: min(100%, 315px);
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 4px 15px rgba(0,0,0,.8));
+}
+.tunnel-brand-link__glint {
+  position: absolute;
+  inset: 16% -40%;
+  transform: translateX(-170%) skewX(-20deg);
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 42%, rgba(255,255,255,.12) 50%, transparent 58%);
+  transition: transform .8s cubic-bezier(.2,.7,.2,1);
+  mix-blend-mode: screen;
+}
+.tunnel-brand-link[data-tone="johnx"]:hover,
+.tunnel-brand-link[data-tone="johnx"]:focus-visible {
+  filter: drop-shadow(0 0 14px rgba(168,85,247,.38));
+}
+.tunnel-brand-link[data-tone="prosound"]:hover,
+.tunnel-brand-link[data-tone="prosound"]:focus-visible {
+  filter: drop-shadow(0 0 14px rgba(47,128,237,.42));
+}
+.tunnel-brand-link:focus-visible { outline: 2px solid white; }
+@media (hover:hover) {
+  .tunnel-brand-link:hover { transform: translateY(-5px) scale(1.025); }
+  .tunnel-brand-link:hover .tunnel-brand-link__glint { transform: translateX(170%) skewX(-20deg); }
+}
+@media (max-width: 639px) {
+  .tunnel-logo-accesses {
+    /* Evita el apilamiento que ocupaba un tercio de la pantalla en móvil. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(.25rem, 2vw, .7rem);
+    padding: 0 max(.7rem,env(safe-area-inset-left)) max(.5rem, env(safe-area-inset-bottom));
+  }
+  .tunnel-brand-link {
+    width: min(100%, 164px);
+    height: clamp(66px, 10.5vh, 102px);
+  }
+  .tunnel-brand-link__image {
+    width: 100%;
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .tunnel-brand-link { height: clamp(56px, 16vh, 105px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tunnel-brand-link, .tunnel-brand-link__glint { transition: none; }
+  .tunnel-brand-link:hover { transform: none; }
 }

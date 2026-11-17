@@ -12,11 +12,13 @@ export function ImageUpload({
   onChange,
   label = "Imagen",
   aspect = "aspect-video",
+  fit = "cover",
 }: {
   value?: string
   onChange: (url: string) => void
   label?: string
   aspect?: string
+  fit?: "contain" | "cover"
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -53,7 +55,7 @@ export function ImageUpload({
       <div className={`relative ${aspect} w-full overflow-hidden rounded-lg border border-border/50 bg-muted/30`}>
         {value ? (
            
-          <img src={value || "/placeholder.svg"} alt="Vista previa" className="h-full w-full object-cover" />
+          <img src={value || "/placeholder.svg"} alt="Vista previa" className={"h-full w-full " + (fit === "contain" ? "object-contain" : "object-cover")} />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-foreground/40">Sin imagen</div>
         )}

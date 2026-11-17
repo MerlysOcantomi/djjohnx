@@ -46,27 +46,26 @@ export function EventsSection({ data }: { data?: EventsData }) {
         </div>
 
         {/* Featured Event Card */}
-        <div className="group glass-card overflow-hidden rounded-2xl transition-all duration-300 hover:glow-gold">
+        <div className="group glass-card overflow-hidden rounded-2xl border border-white/10 transition-all duration-300">
           <div className="grid md:grid-cols-2">
             {/* Event Image */}
-            <div className="relative aspect-[3/4] overflow-hidden md:aspect-auto md:min-h-[500px]">
+            <div className="relative aspect-[4/5] overflow-hidden bg-[#080c19] md:aspect-auto md:min-h-[530px]">
               <Image
                 src={image}
                 alt={`DJ JOHNX en ${venue}`}
                 fill
-                className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                className="object-contain p-2 md:p-4"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-background/80" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
               {/* Badge */}
-              <Badge className="absolute left-4 top-4 bg-primary text-primary-foreground text-sm px-3 py-1">
-                PROXIMO EVENTO
-              </Badge>
+              
             </div>
 
             {/* Event Info */}
             <div className="flex flex-col justify-center p-8 md:p-12">
               <div className="mb-6">
+                <Badge className="mb-4 bg-primary/15 text-primary border border-primary/30">PRÓXIMO EVENTO</Badge>
                 <h3 className="mb-2 text-3xl font-black uppercase tracking-wide text-foreground md:text-4xl lg:text-5xl">
                   {titleLead}
                   {titleTail && <span className="text-gradient-gold">{titleLead ? " " : ""}{titleTail}</span>}
